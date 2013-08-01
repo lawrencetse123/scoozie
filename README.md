@@ -12,7 +12,7 @@ Scoozie is designed to solve problems concerning developer productivity when cre
 Problems that Scoozie solves:
 ----------------------------
 
-1. Job heirarchy and re-use: No more copy/pasting XML to create a new job
+1. Job hierarchy and re-use: No more copy/pasting XML to create a new job
 2. Type and syntax checking: No more errors from typos in XML
 3. Safety / Verification: Scala provides a type-safe environment. 
    Various other verificaitons and sanity checks are made. For example, 

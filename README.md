@@ -142,7 +142,7 @@ For example, consider the following workflow:
 		def SugarOption = {
 		    val first = MapReduceJob("first") dependsOn Start
 		    val option = MapReduceJob("option") dependsOn first doIf "doOption"
-		    val second = MapReduceJob("second") dependsOn (first andOptionally option)
+		    val second = MapReduceJob("second") dependsOn (first andOptionally_: option)
 		    val done = End dependsOn second
 		    Workflow("sugar-option-decision", done)
 		}

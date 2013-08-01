@@ -128,20 +128,6 @@ object Helpers {
             throw new RuntimeException("error: property file not correctly formatted")
         propertyMap + (property(0) -> property(1))
     }
-}
-
-object Workflows {
-    def MaxwellPipeline = {
-        val featureGen = NoOpJob("FeatureGeneration") dependsOn Start
-        val scoreCalc = NoOpJob("ScoreCalculation") dependsOn featureGen
-        val momentGen = NoOpJob("MomentGeneration") dependsOn scoreCalc
-        val end = End dependsOn momentGen
-        Workflow("maxwell-pipeline-wf", end)
-    }
-
-}
-
-case class RetryableOozieClient(client: OozieClient) {
 
     def retryable[T](body: () => T): T = {
         val backoff: Double = 1.5
@@ -162,18 +148,33 @@ case class RetryableOozieClient(client: OozieClient) {
         }
         retryable0(body, 5, 2000)
     }
+}
 
-    def run(conf: Properties): String = retryable {
+object Workflows {
+    def MaxwellPipeline = {
+        val featureGen = NoOpJob("FeatureGeneration") dependsOn Start
+        val scoreCalc = NoOpJob("ScoreCalculation") dependsOn featureGen
+        val momentGen = NoOpJob("MomentGeneration") dependsOn scoreCalc
+        val end = End dependsOn momentGen
+        Workflow("maxwell-pipeline-wf", end)
+    }
+
+}
+
+case class RetryableOozieClient(client: OozieClient) {
+
+    def run(conf: Properties): String = Helpers.retryable {
         () => client.run(conf)
     }
 
-    def createConfiguration(): Properties = retryable {
+    def createConfiguration(): Properties = Helpers.retryable {
         () => client.createConfiguration()
     }
 
-    def getJobInfo(jobId: String): WorkflowJob = retryable {
+    def getJobInfo(jobId: String): WorkflowJob = Helpers.retryable {
         () => client.getJobInfo(jobId)
     }
+
 }
 
 case class XmlPostProcessing(
@@ -205,17 +206,20 @@ object RunWorkflow {
         })
         val fs = FileSystem.get(conf)
         println("About to create path: " + appPath)
-        if (fs.exists(appPath)) {
-            println("It exists, so deleting it first.")
-            fs.delete(appPath, false)
-        }
         writeFile(fs, appPath, xmlString)
     }
 
-    def writeFile(fs: FileSystem, appPath: Path, data: String) = {
-        val out: FSDataOutputStream = fs.create(appPath)
-        out.write(data.getBytes("UTF-8"))
-        out.close
+    def writeFile(fs: FileSystem, appPath: Path, data: String) = Helpers.retryable {
+        () =>
+            {
+                if (fs.exists(appPath)) {
+                    println("It exists, so deleting it first.")
+                    fs.delete(appPath, false)
+                }
+                val out: FSDataOutputStream = fs.create(appPath)
+                out.write(data.getBytes("UTF-8"))
+                out.close
+            }
     }
 
     /*

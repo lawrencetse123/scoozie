@@ -43,9 +43,13 @@ abstract class ScoozieApp(
         }
         val rawAppPath = propertyMap.get("scoozie.wf.application.path").get
         val appPath = {
-            if (!rawAppPath.endsWith(".xml"))
-                rawAppPath + "scoozie_" + wf.name + ".xml"
-            else
+            if (!rawAppPath.endsWith(".xml")) {
+                val suffix = propertyMap.get("pathSuffix") match {
+                    case Some(toSuffix) => "_" + toSuffix
+                    case None           => ""
+                }
+                rawAppPath + "scoozie_" + wf.name + suffix + ".xml"
+            } else
                 throw new RuntimeException("error: you should not overwrite the .xml")
         }
         val oozieUrl = propertyMap.get("scoozie.oozie.url").get

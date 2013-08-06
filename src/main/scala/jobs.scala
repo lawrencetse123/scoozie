@@ -56,25 +56,6 @@ object `package` {
 
     type ArgList = List[(String, String)]
 
-    def WaitForDataJob(paths: List[String], args: List[String] = Nil, minSize: Long = 0, timeout: Duration = 10 seconds) = {
-        val newArgs = args match {
-            case Nil => List("-k=${dataSizeCheckInKB}", "-t=${waitForDataTimeoutInSec}")
-            case _   => args
-        }
-        JavaJob(mainClass = "com.klout.analytics.warehouse.oozie.CheckForData", args = newArgs ++ paths)
-    }
-
-    object WaitForDataJob {
-        def apply(path: String, paths: String*): JavaJob = {
-            WaitForDataJob(List(path) ++ paths)
-        }
-    }
-
-    def DistCpJob(source: String, dest: String, prepare: List[FsTask] = List.empty) = JavaJob(
-        mainClass = "com.klout.analytics.warehouse.oozie.DistcpAction",
-        prepare = prepare,
-        args = List(source, dest))
-
     def verifySuccessPaths(paths: List[String]): List[String] = {
         val checkedPaths = paths map (currString => {
             val headString = {

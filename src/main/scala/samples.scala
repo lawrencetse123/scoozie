@@ -24,8 +24,7 @@ object DecisionSamples {
 
     def newDecisionSample = {
         val first = NoOpJob("first") dependsOn Start
-        val optionalNode = DistCpJob("src", "dest"
-        ) dependsOn first doIf "${doDistCp}"
+        val optionalNode = NoOpJob("optional") dependsOn first doIf "${doOptionalNode}"
         val alwaysDo = NoOpJob("always do") dependsOn (first andOptionally_: optionalNode)
         val optionalNode2 = {
             val sub1 = NoOpJob("sub1") dependsOn Start

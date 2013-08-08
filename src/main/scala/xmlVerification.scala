@@ -74,7 +74,6 @@ object XMLVerification {
                         bothGoToEnd(ACTION_TRANSITION(ref.to), ACTION_TRANSITION(target.to))
                     else
                         areFunctionallySame(getNodeByName(refNodes, ref.to), getNodeByName(targetNodes, target.to), refNodes, targetNodes)
-
                 }
                 if (!areSame)
                     println("join transitions are not the same: \n" + ref + "\n" + target)
@@ -85,8 +84,7 @@ object XMLVerification {
                     println("nodes not of same type: \n" + refNode + "\n" + targetNode)
                     false
                 } else
-                    println("ref: " + ref + "\ntarget: " + target)
-                ref == target
+                    ref == target
         }
     }
 

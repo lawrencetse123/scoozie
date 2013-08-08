@@ -62,13 +62,36 @@ object XMLVerification {
                     println("decision cases are not the same: \n" + refSwitch + "\n" + targetSwitch)
                 sameDecisionCases
 
+            case (ref: FORK, target: FORK) =>
+                val areSame = forkTransitionsAreSame(ref.path, target.path, refNodes, targetNodes)
+                if (!areSame)
+                    println("fork transitions are not the same: \n" + ref + "\n" + target)
+                areSame
+
+            case (ref: JOIN, target: JOIN) =>
+                val areSame = {
+                    if (oneGoesToEnd(ACTION_TRANSITION(ref.to), ACTION_TRANSITION(target.to)))
+                        bothGoToEnd(ACTION_TRANSITION(ref.to), ACTION_TRANSITION(target.to))
+                    else
+                        areFunctionallySame(getNodeByName(refNodes, ref.to), getNodeByName(targetNodes, target.to), refNodes, targetNodes)
+
+                }
+                if (!areSame)
+                    println("join transitions are not the same: \n" + ref + "\n" + target)
+                areSame
+
             case (target, ref) =>
                 if (ref.getClass != target.getClass) {
                     println("nodes not of same type: \n" + refNode + "\n" + targetNode)
                     false
                 } else
-                    ref == target
+                    println("ref: " + ref + "\ntarget: " + target)
+                ref == target
         }
+    }
+
+    def sortForkTransitions(transitions: Seq[FORK_TRANSITION]): Seq[FORK_TRANSITION] = {
+        transitions sortWith ((me, other) => me.start < other.start)
     }
 
     def sortHiveParams(hive: ACTIONType): ACTIONType = {
@@ -96,12 +119,13 @@ object XMLVerification {
         }
     }
 
-    def nextNodesAreSame(refOk: ACTION_TRANSITION, targetOk: ACTION_TRANSITION, refError: ACTION_TRANSITION, targetError: ACTION_TRANSITION, refNodes: Map[String, WORKFLOWu45APPOption], targetNodes: Map[String, WORKFLOWu45APPOption]): Boolean = {
-        def oneGoesToEnd(refTransition: ACTION_TRANSITION, targetTransition: ACTION_TRANSITION) =
-            refTransition.to == "end" || targetTransition.to == "end"
-        def bothGoToEnd(refTransition: ACTION_TRANSITION, targetTransition: ACTION_TRANSITION) =
-            refTransition.to == "end" && targetTransition.to == "end"
+    def oneGoesToEnd(refTransition: ACTION_TRANSITION, targetTransition: ACTION_TRANSITION) =
+        refTransition.to == "end" || targetTransition.to == "end"
 
+    def bothGoToEnd(refTransition: ACTION_TRANSITION, targetTransition: ACTION_TRANSITION) =
+        refTransition.to == "end" && targetTransition.to == "end"
+
+    def nextNodesAreSame(refOk: ACTION_TRANSITION, targetOk: ACTION_TRANSITION, refError: ACTION_TRANSITION, targetError: ACTION_TRANSITION, refNodes: Map[String, WORKFLOWu45APPOption], targetNodes: Map[String, WORKFLOWu45APPOption]): Boolean = {
         val okToMatch = {
             if (oneGoesToEnd(refOk, targetOk))
                 bothGoToEnd(refOk, targetOk)
@@ -134,6 +158,19 @@ object XMLVerification {
         }
         val defaultsSame: Boolean = (refSwitch.default.to == "end" && targetSwitch.default.to == "end") || areFunctionallySame(getNodeByName(refNodes, refSwitch.default.to), getNodeByName(targetNodes, targetSwitch.default.to), refNodes, targetNodes)
         optionsSame && defaultsSame
+    }
+
+    def forkTransitionsAreSame(refTransitions: Seq[FORK_TRANSITION], targetTransitions: Seq[FORK_TRANSITION], refNodes: Map[String, WORKFLOWu45APPOption], targetNodes: Map[String, WORKFLOWu45APPOption]): Boolean = {
+        if (refTransitions.length != targetTransitions.length)
+            false
+        else {
+            val transitions = sortForkTransitions(refTransitions).zip(sortForkTransitions(targetTransitions))
+            transitions filterNot {
+                case (refTransition, targetTransition) =>
+                    areFunctionallySame(getNodeByName(refNodes, refTransition.start), getNodeByName(targetNodes, targetTransition.start), refNodes, targetNodes)
+            } isEmpty
+        }
+
     }
 
     /*

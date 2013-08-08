@@ -37,6 +37,14 @@ class XMLVerificationSpec extends Specification {
         "give false for decision with cases in different order" in {
             XMLVerification.verify(multipleDecisionCaseWf, reOrderedDecisionCaseWf) must_== false
         }
+
+        "give true for different-ordered fork paths" in {
+            XMLVerification.verify(forkWf, reOrderedForkWf) must_== true
+        }
+
+        "give false for same-named fork transitions, but different paths" in {
+            XMLVerification.verify(forkWf, differentForkWf) must_== false
+        }
     }
 
     val simpleWf = """
@@ -310,6 +318,153 @@ class XMLVerificationSpec extends Specification {
                 <param>param1=${param1}</param>
                 <param>param2=${param2}</param>
                 <param>param3=${param3}</param>
+                <file>../oozie-setup.hql</file>
+            </hive>
+            <ok to="end"/>
+            <error to="kill"/>
+        </action>
+        <kill name="kill">
+            <message>test failed, error message[${wf:errorMessage(wf:lastErrorNode())}]</message>
+        </kill>
+        <end name="end"/>
+    </workflow-app>
+    """
+
+    val forkWf = """
+    <workflow-app name="test" xmlns="uri:oozie:workflow:0.2">
+        <start to="fork"/>
+        <fork name="fork">
+            <path start="second_path"/>
+            <path start="first_path"/>
+        </fork>
+        <action name="first_path">
+            <hive xmlns="uri:oozie:hive-action:0.2">
+                <job-tracker>${jobTracker}</job-tracker>
+                <name-node>${nameNode}</name-node>
+                <job-xml>../hive-site.xml</job-xml>
+                <configuration>
+                    <property>
+                        <name>oozie.hive.defaults</name>
+                        <value>../hive-default.xml</value>
+                    </property>
+                </configuration>
+                <script>script.hql</script>
+                <param>dateString=${dateString}</param>
+                <file>../oozie-setup.hql</file>
+            </hive>
+            <ok to="end"/>
+            <error to="kill"/>
+        </action>
+        <action name="second_path">
+            <hive xmlns="uri:oozie:hive-action:0.2">
+                <job-tracker>${jobTracker}</job-tracker>
+                <name-node>${nameNode}</name-node>
+                <job-xml>../hive-site.xml</job-xml>
+                <configuration>
+                    <property>
+                        <name>oozie.hive.defaults</name>
+                        <value>../hive-default.xml</value>
+                    </property>
+                </configuration>
+                <script>script2.hql</script>
+                <file>../oozie-setup.hql</file>
+            </hive>
+            <ok to="end"/>
+            <error to="kill"/>
+        </action>
+        <kill name="kill">
+            <message>test failed, error message[${wf:errorMessage(wf:lastErrorNode())}]</message>
+        </kill>
+        <end name="end"/>
+    </workflow-app>
+    """
+
+    val reOrderedForkWf = """
+    <workflow-app name="test" xmlns="uri:oozie:workflow:0.2">
+        <start to="fork"/>
+        <fork name="fork">
+            <path start="path_z1"/>
+            <path start="path_2"/>
+        </fork>
+        <action name="path_z1">
+            <hive xmlns="uri:oozie:hive-action:0.2">
+                <job-tracker>${jobTracker}</job-tracker>
+                <name-node>${nameNode}</name-node>
+                <job-xml>../hive-site.xml</job-xml>
+                <configuration>
+                    <property>
+                        <name>oozie.hive.defaults</name>
+                        <value>../hive-default.xml</value>
+                    </property>
+                </configuration>
+                <script>script.hql</script>
+                <param>dateString=${dateString}</param>
+                <file>../oozie-setup.hql</file>
+            </hive>
+            <ok to="end"/>
+            <error to="kill"/>
+        </action>
+        <action name="path_2">
+            <hive xmlns="uri:oozie:hive-action:0.2">
+                <job-tracker>${jobTracker}</job-tracker>
+                <name-node>${nameNode}</name-node>
+                <job-xml>../hive-site.xml</job-xml>
+                <configuration>
+                    <property>
+                        <name>oozie.hive.defaults</name>
+                        <value>../hive-default.xml</value>
+                    </property>
+                </configuration>
+                <script>script2.hql</script>
+                <file>../oozie-setup.hql</file>
+            </hive>
+            <ok to="end"/>
+            <error to="kill"/>
+        </action>
+        <kill name="kill">
+            <message>test failed, error message[${wf:errorMessage(wf:lastErrorNode())}]</message>
+        </kill>
+        <end name="end"/>
+    </workflow-app>
+    """
+
+    val differentForkWf = """
+    <workflow-app name="test" xmlns="uri:oozie:workflow:0.2">
+        <start to="fork"/>
+        <fork name="fork">
+            <path start="first_path"/>
+            <path start="second_path"/>
+        </fork>
+        <action name="first_path">
+            <hive xmlns="uri:oozie:hive-action:0.2">
+                <job-tracker>${jobTracker}</job-tracker>
+                <name-node>${nameNode}</name-node>
+                <job-xml>../hive-site.xml</job-xml>
+                <configuration>
+                    <property>
+                        <name>oozie.hive.defaults</name>
+                        <value>../hive-default.xml</value>
+                    </property>
+                </configuration>
+                <script>script2.hql</script>
+                <param>dateString=${dateString}</param>
+                <file>../oozie-setup.hql</file>
+            </hive>
+            <ok to="end"/>
+            <error to="kill"/>
+        </action>
+        <action name="second_path">
+            <hive xmlns="uri:oozie:hive-action:0.2">
+                <job-tracker>${jobTracker}</job-tracker>
+                <name-node>${nameNode}</name-node>
+                <job-xml>../hive-site.xml</job-xml>
+                <configuration>
+                    <property>
+                        <name>oozie.hive.defaults</name>
+                        <value>../hive-default.xml</value>
+                    </property>
+                </configuration>
+                <script>script.hql</script>
                 <file>../oozie-setup.hql</file>
             </hive>
             <ok to="end"/>

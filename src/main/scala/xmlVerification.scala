@@ -54,7 +54,7 @@ object XMLVerification {
                 }
                 areSame
 
-            case (ref: KILL, target: KILL) => true
+            case (target: KILL, ref: KILL) => true
 
             case (DECISION(targetSwitch, targetName), DECISION(refSwitch, refName)) =>
                 val sameDecisionCases = decisionCasesAreSame(refSwitch.switchsequence1, targetSwitch.switchsequence1, refNodes, targetNodes)
@@ -62,13 +62,13 @@ object XMLVerification {
                     println("decision cases are not the same: \n" + refSwitch + "\n" + targetSwitch)
                 sameDecisionCases
 
-            case (ref: FORK, target: FORK) =>
+            case (target: FORK, ref: FORK) =>
                 val areSame = forkTransitionsAreSame(ref.path, target.path, refNodes, targetNodes)
                 if (!areSame)
                     println("fork transitions are not the same: \n" + ref + "\n" + target)
                 areSame
 
-            case (ref: JOIN, target: JOIN) =>
+            case (target: JOIN, ref: JOIN) =>
                 val areSame = {
                     if (oneGoesToEnd(ACTION_TRANSITION(ref.to), ACTION_TRANSITION(target.to)))
                         bothGoToEnd(ACTION_TRANSITION(ref.to), ACTION_TRANSITION(target.to))
@@ -86,10 +86,6 @@ object XMLVerification {
                 } else
                     ref == target
         }
-    }
-
-    def sortForkTransitions(transitions: Seq[FORK_TRANSITION]): Seq[FORK_TRANSITION] = {
-        transitions sortWith ((me, other) => me.start < other.start)
     }
 
     def sortHiveParams(hive: ACTIONType): ACTIONType = {
@@ -162,13 +158,12 @@ object XMLVerification {
         if (refTransitions.length != targetTransitions.length)
             false
         else {
-            val transitions = sortForkTransitions(refTransitions).zip(sortForkTransitions(targetTransitions))
-            transitions filterNot {
-                case (refTransition, targetTransition) =>
-                    areFunctionallySame(getNodeByName(refNodes, refTransition.start), getNodeByName(targetNodes, targetTransition.start), refNodes, targetNodes)
+            refTransitions filterNot { refTransition =>
+                val nextRefNode = getNodeByName(refNodes, refTransition.start)
+                val matchingTransition = targetTransitions.find (targetTransition => areFunctionallySame(nextRefNode, getNodeByName(targetNodes, targetTransition.start), refNodes, targetNodes))
+                matchingTransition nonEmpty
             } isEmpty
         }
-
     }
 
     /*

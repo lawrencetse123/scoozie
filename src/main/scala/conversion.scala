@@ -52,13 +52,15 @@ case class GraphNode(
                     this.afterNames == node.afterNames &&
                     this.decisionRoute == node.decisionRoute &&
                     this.sugarDecisionRoute == node.sugarDecisionRoute &&
-                    this.errorTo == node.errorTo
+                    this.errorTo == node.errorTo &&
+                    this.decisionAfterNames == node.decisionAfterNames &&
+                    this.decisionBeforeNames == node.decisionBeforeNames
             case _ => false
         }
     }
 
     override def hashCode: Int = {
-        Objects.hashCode(name, workflowOption, beforeNames, afterNames, decisionRoute, sugarDecisionRoute, errorTo)
+        Objects.hashCode(name, workflowOption, beforeNames, afterNames, decisionBeforeNames, decisionAfterNames, decisionRoute, sugarDecisionRoute, errorTo)
     }
 
     /*

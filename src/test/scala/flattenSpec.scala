@@ -211,11 +211,55 @@ class FlattenSpec extends Specification {
             decision.before = RefSet(first)
             decision.decisionAfter = RefSet(default, option)
             default.decisionAfter = RefSet(second)
+            default.decisionBefore = RefSet(decision)
             option.decisionAfter = RefSet(second)
+            option.decisionBefore = RefSet(decision)
             second.decisionBefore = RefSet(default, option)
             second.after = RefSet(end)
 
             Flatten(SimpleDecision).values.toSet must_== Set(first, decision, second, default, option)
+        }
+
+        "work for decision with both routes going to same place" in {
+            def ComplexDecision = {
+                val rando = NoOpJob("rando") dependsOn Start
+                val first = Decision(
+                    "foo" -> Predicates.BooleanProperty("bar")
+                ) dependsOn rando
+                val end = End dependsOn OneOf(first default, first option "foo")
+                Workflow("complex-decisions", end)
+            }
+
+            val rando = GraphNode("rando", WorkflowJob(NoOpJob("rando")))
+            val first = GraphNode("decision-end", WorkflowDecision(List("foo" -> Predicates.BooleanProperty("bar"))))
+            val end = GraphNode("end", WorkflowEnd)
+
+            rando.after = RefSet(first)
+            first.before = RefSet(rando)
+            first.decisionAfter = RefSet(end)
+
+            Flatten(ComplexDecision).values.toSet must_== Set(rando, first)
+        }
+
+        "work for decision with both routes going to same place not end" in {
+            def ComplexDecision = {
+                val first = Decision(
+                    "foo" -> Predicates.BooleanProperty("bar")
+                ) dependsOn Start
+                val foo = NoOpJob("foo") dependsOn OneOf(first default, first option "foo")
+                val end = End dependsOn foo
+                Workflow("complex-decisions", end)
+            }
+
+            val first = GraphNode("decision-foo", WorkflowDecision(List("foo" -> Predicates.BooleanProperty("bar"))))
+            val foo = GraphNode("foo", WorkflowJob(NoOpJob("foo")))
+            val end = GraphNode("end", WorkflowEnd)
+
+            first.decisionAfter = RefSet(foo)
+            foo.decisionBefore = RefSet(first)
+            foo.after = RefSet(end)
+
+            Flatten(ComplexDecision).values.toSet must_== Set(foo, first)
         }
 
         "work with more complex decision" in {
@@ -230,9 +274,11 @@ class FlattenSpec extends Specification {
             first.after = RefSet(decision)
             decision.before = RefSet(first)
             decision.decisionAfter = RefSet(default, option)
+            default.decisionBefore = RefSet(decision)
             default.after = RefSet(default2)
             default2.before = RefSet(default)
             default2.decisionAfter = RefSet(second)
+            option.decisionBefore = RefSet(decision)
             option.decisionAfter = RefSet(second)
             second.decisionBefore = RefSet(default2, option)
             second.after = RefSet(end)
@@ -381,7 +427,7 @@ class FlattenSpec extends Specification {
             option.decisionAfter = RefSet(default)
             default.decisionBefore = RefSet(decision2, option)
             default.decisionAfter = RefSet(default2)
-            default2.decisionBefore = RefSet(decision)
+            default2.decisionBefore = RefSet(decision, default)
             default2.after = RefSet(end)
 
             Flatten(DecisionAndSugarOption).values.toSet must_== Set(first, option, decision, decision2, default, default2)
@@ -536,7 +582,7 @@ class FlattenSpec extends Specification {
 
     def SimpleDecision = {
         val first = NoOpJob("first") dependsOn Start
-        val decision = Decision("route1" -> Predicates.AlwaysTrue) dependsOn first //decision is a DecisionNode
+        val decision = Decision("route1" -> Predicates.AlwaysTrue) dependsOn first
         val default = NoOpJob("default") dependsOn (decision default)
         val option = NoOpJob("option") dependsOn (decision option "route1")
         val second = NoOpJob("second") dependsOn OneOf(default, option)

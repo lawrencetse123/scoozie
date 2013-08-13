@@ -35,20 +35,27 @@ object Verification {
         })
         //verify that each predicate is represented
         val verifiedDecisions = decisions filter (dec => {
-            val optionsPresent = dec.workflowOption match {
-                case WorkflowDecision(predicates) => predicates.filter (currPred => {
-                    val containsPred = dec.decisionAfter.exists(_.decisionRoute match {
-                        case Some(route) => route == currPred._1
-                        case _           => false
+            val (predicates, foundOptions) = dec.workflowOption match {
+                case WorkflowDecision(predicates) =>
+                    val options = predicates.filter (currPred => {
+                        val containsPred = dec.decisionAfter.exists(_.decisionRoute match {
+                            case Some(route) => route == currPred._1
+                            case _           => false
+                        })
+                        containsPred
                     })
-                    containsPred
-                }).size == predicates.size
+                    (predicates, options)
                 case _ => throw new RuntimeException("error: unexpected type")
             }
+            val optionsPresent = foundOptions.toSet == predicates.toSet
             val defaultPresent = dec.decisionAfter.exists(_.decisionRoute match {
                 case Some(route) => route == "default"
                 case _           => false
             })
+            if (!defaultPresent)
+                println(s"For decision '${dec.name}' missing 'default'")
+            if (!optionsPresent)
+                println(s"For decision '${dec.name}' missing options. needed '$predicates' but found '$foundOptions'")
             optionsPresent && defaultPresent
         })
         verifiedDecisions.size == decisions.size

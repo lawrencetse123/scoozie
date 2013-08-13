@@ -107,7 +107,7 @@ class VerificationSpec extends Specification {
             val thirdB = GraphNode("thirdB", WorkflowJob(NoOpJob("thirdB")))
             val thirdC = GraphNode("thirdC", WorkflowJob(NoOpJob("thirdC")))
             val thirdD = GraphNode("thirdD", WorkflowJob(NoOpJob("thirdD")))
-            val firstJoin = GraphNode("join-thirdA-thirdB", WorkflowJoin)
+            val firstJoin = GraphNode("join-thirdB-thirdA", WorkflowJoin)
             val secondJoin = GraphNode("join-thirdD-thirdC", WorkflowJoin)
             val thirdJoin = GraphNode("join-thirdA-thirdB-thirdC-thirdD", WorkflowJoin)
 
@@ -152,6 +152,51 @@ class VerificationSpec extends Specification {
 
         "give invalid result for second invalid simple decision" in {
             Verification.verifyDecisions(Flatten(simpleInvalidDecision2).values.toSet) must beFalse
+        }
+
+        "give valid for both decision nodes going to end" in {
+            def complexDecisions = {
+                val first = Decision(
+                    "foo" -> Predicates.BooleanProperty("bar")
+                ) dependsOn Start
+                val end = End dependsOn OneOf(first default, first option "foo")
+                Workflow("complex-decisions", end)
+            }
+            Verification.verifyDecisions(Flatten(complexDecisions).values.toSet) must beTrue
+        }
+
+        "give valid for both decision nodes going to same place not end" in {
+            def ComplexDecision = {
+                val first = Decision(
+                    "foo" -> Predicates.BooleanProperty("bar")
+                ) dependsOn Start
+                val foo = NoOpJob("foo2") dependsOn OneOf(first default, first option "foo")
+                val end = End dependsOn foo
+                Workflow("complex-decisions", end)
+            }
+            Verification.verifyDecisions(Flatten(ComplexDecision).values.toSet) must beTrue
+        }
+
+        "give valid for decision with one route at end" in {
+            def decision = {
+                val first = Decision(
+                    "foo" -> Predicates.BooleanProperty("bar")
+                ) dependsOn Start
+                val foo = NoOpJob("foo") dependsOn (first option "foo")
+                val end = End dependsOn OneOf(foo, first default)
+                Workflow("complex-decisions", end)
+            }
+            Verification.verifyDecisions(Flatten(decision).values.toSet) must beTrue
+
+            def decision2 = {
+                val first = Decision(
+                    "foo" -> Predicates.BooleanProperty("bar")
+                ) dependsOn Start
+                val foo = NoOpJob("foo") dependsOn (first default)
+                val end = End dependsOn OneOf(foo, first option "foo")
+                Workflow("complex-decisions", end)
+            }
+            Verification.verifyDecisions(Flatten(decision2).values.toSet) must beTrue
         }
 
     }

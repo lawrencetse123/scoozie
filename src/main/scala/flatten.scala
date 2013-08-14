@@ -102,14 +102,13 @@ object Flatten {
 
         var accum: RefMap[Dependency, GraphNode] = RefMap[Dependency, GraphNode](Map.empty)
 
-        def flatten0(currentDep: Dependency, after: Set[GraphNode], inDecision: Boolean = false, currDecision: Option[GraphNode] = None) {
+        def flatten0(currentDep: Dependency, after: Set[GraphNode], inDecision: Boolean = false) {
             accum get currentDep match {
                 //check if we've already processed the dependency. If so, just update after to include where we came from
                 case Some(alreadyThere) =>
                     currentDep match {
                         case DecisionNode(decision, dependencies) =>
                             alreadyThere.decisionAfter ++= RefSet(after.toSeq)
-                            alreadyThere.name = "decision-" + alreadyThere.getDecisionRouteName(decision.predicates.head._1)
                         case _ =>
                             after foreach (alreadyThere.after += _)
                     }
@@ -127,7 +126,7 @@ object Flatten {
                                 before = RefSet(),
                                 after = RefSet(after.toSeq))
                             accum += currentDep -> newNode
-                            deps foreach (flatten0(_, Set(newNode), inDecision, currDecision))
+                            deps foreach (flatten0(_, Set(newNode), inDecision))
 
                         case Node(wf: Workflow, deps) =>
                             val wfAccum = Flatten(wf)
@@ -159,10 +158,6 @@ object Flatten {
                                     //add in new decisionAfter
                                     lastNode.decisionAfter ++= RefSet(after.toSeq)
                                     after foreach (after => {
-                                        // after.decisionRoute match {
-                                        //     case None => after.decisionRoute = decisionRoute
-                                        //     case _    =>
-                                        // }
                                         after.decisionRoutes = (after.decisionRoutes ++ decisionRoutes)
                                     })
                                     lastNode.after = RefSet()
@@ -171,7 +166,7 @@ object Flatten {
                             //recur on the "starting" nodes of this subwf
                             val newAfter = (wfAccum.values filter (node => isStartNode(node))).toSet
                             deps foreach { newCurrent =>
-                                flatten0(newCurrent, newAfter, inDecision, currDecision)
+                                flatten0(newCurrent, newAfter, inDecision)
                             }
                         //check if we're dealing with a Decision
                         case OneOf(dep1, deps @ _*) =>
@@ -190,59 +185,12 @@ object Flatten {
                                                     after = RefSet(),
                                                     decisionAfter = RefSet(after.toSeq))
                                                 accum += currDep -> newNode
-                                                deps.toList foreach (flatten0(_, Set(newNode), inDecision, currDecision))
+                                                deps.toList foreach (flatten0(_, Set(newNode), inDecision))
                                             case _ =>
                                                 flatten0(currDep, after, true)
                                         }
                                 }
                             })
-
-                        case SugarOption(required, optional @ _*) =>
-                            after foreach (_.decisionRoutes = ???) // Some("default")) ??
-                            val predicates = List()
-                            val decisionNode = GraphNode(
-                                "decision-",
-                                WorkflowDecision(predicates),
-                                before = RefSet(),
-                                after = RefSet(),
-                                decisionBefore = RefSet(),
-                                decisionAfter = RefSet(after.toSeq)
-                            )
-                            accum += DecisionDependency(DecisionNode(Decision(predicates), Set.empty), None) -> decisionNode
-                            required match {
-                                case Node(job: Job, deps) =>
-                                    val newNode = GraphNode(
-                                        job.jobName,
-                                        WorkflowJob(job),
-                                        before = RefSet(),
-                                        after = RefSet()
-                                    )
-                                    newNode.after = RefSet(decisionNode)
-                                    flatten0(required, Set(decisionNode), true, Some(decisionNode))
-                                case _ =>
-                            }
-                            optional foreach (flatten0(_, after, true, Some(decisionNode)))
-
-                        case DoIf(predicate, deps @ _*) =>
-                            //get decision
-                            val decision = currDecision match {
-                                case Some(decision) => decision
-                                case _              => throw new RuntimeException("error: problem with sugared decision")
-                            }
-                            decision.name = "decision-" + after.head.name
-                            val defaultNode = decision.decisionAfter.head
-                            decision.decisionAfter ++= RefSet(after.toSeq)
-                            decision.workflowOption = WorkflowDecision(List(after.head.name -> dsl.Predicates.BooleanProperty(predicate)))
-                            after foreach { n =>
-                                n.sugarDecisionRoute = Some(predicate)
-                                n.decisionRoutes = ??? //Some(n.name)
-                            }
-                            //find the last node in the optional route
-                            getDecisionLeaves(after.head, defaultNode) foreach { n =>
-                                n.decisionAfter = n.after
-                                n.after = RefSet()
-                            }
-                            deps foreach (flatten0(_, Set(decision)))
 
                         case ErrorTo(node) =>
                             accum get node match {
@@ -265,18 +213,18 @@ object Flatten {
                             }
 
                         case DecisionDependency(parent, option) =>
-                            val additionalDecisionRoute = (option getOrElse "default") -> WorkflowDecision(parent.decision.predicates)
+                            val additionalDecisionRoute = (option getOrElse "default") -> parent
                             after foreach (_.decisionRoutes += additionalDecisionRoute)
                             flatten0(parent, after)
 
-                        case DecisionNode(decision, dependencies) =>
+                        case decisionNode @ DecisionNode(decision, dependencies) =>
                             val node = GraphNode(
                                 "decision",
-                                WorkflowDecision(decision.predicates),
+                                WorkflowDecision(decision.predicates, decisionNode),
                                 before = RefSet(),
                                 after = RefSet(),
                                 decisionAfter = RefSet(after.toSeq))
-                            node.name = "decision-" + node.getDecisionRouteName(decision.predicates.head._1)
+                            node.name = "decision-" + node.getDecisionName(decision.predicates map (_._1))
                             accum += currentDep -> node
                             dependencies foreach { dep =>
                                 flatten0(dep, Set(node))
@@ -295,10 +243,25 @@ object Flatten {
             node.after foreach (_.before += node)
             node.decisionAfter foreach (_.decisionBefore += node)
         })
+        updateDecisionNames(results.values.toList)
         verifyNames(results.values.toList)
         val additionalControlNodes = processForkJoins(results)
         fixLongNames(additionalControlNodes.values.toList)
         results ++ additionalControlNodes
+    }
+
+    def updateDecisionNames(nodes: List[GraphNode]) {
+        val refSet = RefSet(nodes)
+        val ordered = Conversion.order(refSet)
+        val nodesToRename = ordered.toList sortBy (_.partialOrder) map (_.node) reverse
+
+        nodesToRename foreach { node =>
+            node.workflowOption match {
+                case WorkflowDecision(predicates, decisionNode) =>
+                    node.name = "decision-" + node.getDecisionName(predicates map (_._1))
+                case _ =>
+            }
+        }
     }
 
     def getDecisionLeaves(node: GraphNode, endNode: GraphNode): Set[GraphNode] = {

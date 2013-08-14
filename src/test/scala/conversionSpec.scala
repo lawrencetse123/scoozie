@@ -138,7 +138,7 @@ class ConversionSpec extends Specification {
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
                             jobu45tracker = "${jobTracker}",
                             nameu45node = "${nameNode}")),
-                        ok = ACTION_TRANSITION("decision-mr_option"),
+                        ok = ACTION_TRANSITION("decision-mr_default-mr_option"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("decision"), DECISION(
                         switch = SWITCH(
@@ -149,7 +149,7 @@ class ConversionSpec extends Specification {
                                         to = "mr_option")),
                                 default = DEFAULT(
                                     to = "mr_default"))),
-                        name = "decision-mr_option")),
+                        name = "decision-mr_default-mr_option")),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_default",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
@@ -505,7 +505,7 @@ class ConversionSpec extends Specification {
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
                             jobu45tracker = "${jobTracker}",
                             nameu45node = "${nameNode}")),
-                        ok = ACTION_TRANSITION("decision-mr_option"),
+                        ok = ACTION_TRANSITION("decision-mr_second-mr_option"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("decision"), DECISION(
                         switch = SWITCH(
@@ -516,7 +516,7 @@ class ConversionSpec extends Specification {
                                         to = "mr_option")),
                                 default = DEFAULT(
                                     to = "mr_second"))),
-                        name = "decision-mr_option")),
+                        name = "decision-mr_second-mr_option")),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_option",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
@@ -549,7 +549,7 @@ class ConversionSpec extends Specification {
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
                             jobu45tracker = "${jobTracker}",
                             nameu45node = "${nameNode}")),
-                        ok = ACTION_TRANSITION("decision-decision-mr_option"),
+                        ok = ACTION_TRANSITION("decision-mr_default2-decision-mr_default-mr_---"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("decision"), DECISION(
                         switch = SWITCH(
@@ -557,10 +557,10 @@ class ConversionSpec extends Specification {
                                 caseValue = Seq(
                                     CASE(
                                         value = "true",
-                                        to = "decision-mr_option")),
+                                        to = "decision-mr_default-mr_option")),
                                 default = DEFAULT(
                                     to = "mr_default2"))),
-                        name = "decision-decision-mr_option")),
+                        name = "decision-mr_default2-decision-mr_default-mr_---")),
                     DataRecord(None, Some("decision"), DECISION(
                         switch = SWITCH(
                             switchsequence1 = SWITCHSequence1(
@@ -570,7 +570,7 @@ class ConversionSpec extends Specification {
                                         to = "mr_option")),
                                 default = DEFAULT(
                                     to = "mr_default"))),
-                        name = "decision-mr_option")),
+                        name = "decision-mr_default-mr_option")),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_option",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
@@ -648,13 +648,13 @@ class ConversionSpec extends Specification {
                                         to = "mr_option")),
                                 default = DEFAULT(
                                     to = "mr_default"))),
-                        name = "decision-mr_option")),
+                        name = "decision-mr_default-mr_option")),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_default",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
                             jobu45tracker = "${jobTracker}",
                             nameu45node = "${nameNode}")),
-                        ok = ACTION_TRANSITION("decision-mr_sugarOption"),
+                        ok = ACTION_TRANSITION("decision-mr_last-mr_sugarOption"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_option",
@@ -672,7 +672,7 @@ class ConversionSpec extends Specification {
                                         to = "mr_sugarOption")),
                                 default = DEFAULT(
                                     to = "mr_last"))),
-                        name = "decision-mr_sugarOption")),
+                        name = "decision-mr_last-mr_sugarOption")),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_sugarOption",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
@@ -690,7 +690,7 @@ class ConversionSpec extends Specification {
                     DataRecord(None, Some("kill"), KILL(
                         message = "sub-wf-ending-with-sugar-option" + " failed, error message[${wf:errorMessage(wf:lastErrorNode())}]",
                         name = "kill"))),
-                start = START("decision-mr_option"),
+                start = START("decision-mr_default-mr_option"),
                 end = END("end"))
             Conversion(SubWfEndWithSugarOption) must_== wf
         }
@@ -786,7 +786,7 @@ class ConversionSpec extends Specification {
     def SugarOption = {
         val first = MapReduceJob("first") dependsOn Start
         val option = MapReduceJob("option") dependsOn first doIf "${doOption}"
-        val second = MapReduceJob("second") dependsOn (first andOptionally_: option)
+        val second = MapReduceJob("second") dependsOn Optional(option)
         val done = End dependsOn second
         Workflow("sugar-option-decision", done)
     }
@@ -797,7 +797,7 @@ class ConversionSpec extends Specification {
             "route1" -> Predicates.AlwaysTrue
         ) dependsOn first
         val option = MapReduceJob("option") dependsOn (decision option "route1") doIf "${doOption}"
-        val default = MapReduceJob("default") dependsOn ((decision option "route1") andOptionally_: option)
+        val default = MapReduceJob("default") dependsOn Optional(option)
         val default2 = MapReduceJob("default2") dependsOn OneOf(decision default, default)
         val end = End dependsOn default2
         Workflow("mixed-decision-styles", end)
@@ -827,7 +827,7 @@ class ConversionSpec extends Specification {
         val option = MapReduceJob("option") dependsOn (decision option "option")
         val default = MapReduceJob("default") dependsOn (decision default)
         val sugarOption = MapReduceJob("sugarOption") dependsOn default doIf "doSugarOption"
-        val end = End dependsOn OneOf(option, default andOptionally_: sugarOption)
+        val end = End dependsOn OneOf(option, Optional(sugarOption))
         Workflow("test-agg-content", end)
     }
 

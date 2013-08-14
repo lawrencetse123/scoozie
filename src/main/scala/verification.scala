@@ -29,17 +29,17 @@ object Verification {
     }
 
     def verifyDecisions(graph: Set[GraphNode]): Boolean = {
-        val decisions: Set[GraphNode] = graph flatMap (node => node.workflowOption match {
-            case dec @ WorkflowDecision(predicates) => Some(node)
-            case _                                  => None
+        val decisions: Set[GraphNode] = graph filter (node => node.workflowOption match {
+            case dec @ WorkflowDecision(predicates, _) => true
+            case _                                     => false
         })
         //verify that each predicate is represented
         val verifiedDecisions = decisions filter (dec => {
             val (predicates, foundOptions) = dec.workflowOption match {
-                case WorkflowDecision(predicates) =>
+                case WorkflowDecision(predicates, myDecNode) =>
                     val options = predicates.filter (currPred => {
                         val containsPred = dec.decisionAfter.exists(_.decisionRoutes exists {
-                            case (route, workflowDecision) => route == currPred._1 && workflowDecision == dec
+                            case (route, decisionNode) => route == currPred._1 && decisionNode == myDecNode
                         })
                         containsPred
                     })
@@ -47,9 +47,13 @@ object Verification {
                 case _ => throw new RuntimeException("error: unexpected type")
             }
             val optionsPresent = foundOptions.toSet == predicates.toSet
-            val defaultPresent = dec.decisionAfter.exists(_.decisionRoutes exists {
-                case (route, workflowDecision) => route == "default" && workflowDecision == dec
-            })
+            val defaultPresent = dec.workflowOption match {
+                case WorkflowDecision(predicates, myDecNode) =>
+                    dec.decisionAfter.exists(_.decisionRoutes exists {
+                        case (route, decisionNode) => route == "default" && decisionNode == myDecNode
+                    })
+                case _ => throw new RuntimeException("error: unexpected type")
+            }
             if (!defaultPresent)
                 println(s"For decision '${dec.name}' missing 'default'")
             if (!optionsPresent)
@@ -66,7 +70,6 @@ object Verification {
 	 * (http://oozie.apache.org/docs/3.2.0-incubating/WorkflowFunctionalSpec.html#a3.1.5_Fork_and_Join_Control_Nodes)
 	 */
     def verifyForkJoins(graph: Set[GraphNode]): Boolean = {
-
         getBadJoins(graph) isEmpty
     }
 

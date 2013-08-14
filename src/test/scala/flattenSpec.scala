@@ -200,10 +200,20 @@ class FlattenSpec extends Specification {
         }
 
         "work with simple decision" in {
+            val (simpleDecision, decNode) = {
+                val first = NoOpJob("first") dependsOn Start
+                val decision = Decision("route1" -> Predicates.AlwaysTrue) dependsOn first
+                val default = NoOpJob("default") dependsOn (decision default)
+                val option = NoOpJob("option") dependsOn (decision option "route1")
+                val second = NoOpJob("second") dependsOn OneOf(default, option)
+                val done = End dependsOn second
+                Workflow("simple-decision", done) -> decision
+            }
+
             val first = GraphNode("first", WorkflowJob(NoOpJob("first")))
-            val decision = GraphNode("decision-option", WorkflowDecision(List("route1" -> Predicates.AlwaysTrue)))
-            val default = GraphNode("default", WorkflowJob(NoOpJob("default")), RefSet(), RefSet(), RefSet(), RefSet(), Some("default"))
-            val option = GraphNode("option", WorkflowJob(NoOpJob("option")), RefSet(), RefSet(), RefSet(), RefSet(), Some("route1"))
+            val decision = GraphNode("decision-default-option", WorkflowDecision(List("route1" -> Predicates.AlwaysTrue), decNode))
+            val default = GraphNode("default", WorkflowJob(NoOpJob("default")), RefSet(), RefSet(), RefSet(), RefSet(), Set("default" -> decNode))
+            val option = GraphNode("option", WorkflowJob(NoOpJob("option")), RefSet(), RefSet(), RefSet(), RefSet(), Set("route1" -> decNode))
             val second = GraphNode("second", WorkflowJob(NoOpJob("second")))
             val end = GraphNode("end", WorkflowEnd)
 
@@ -217,57 +227,72 @@ class FlattenSpec extends Specification {
             second.decisionBefore = RefSet(default, option)
             second.after = RefSet(end)
 
-            Flatten(SimpleDecision).values.toSet must_== Set(first, decision, second, default, option)
+            Flatten(simpleDecision).values.toSet must_== Set(first, decision, second, default, option)
         }
 
         "work for decision with both routes going to same place" in {
-            def ComplexDecision = {
+            val (complexDecision, dec) = {
                 val rando = NoOpJob("rando") dependsOn Start
                 val first = Decision(
                     "foo" -> Predicates.BooleanProperty("bar")
                 ) dependsOn rando
                 val end = End dependsOn OneOf(first default, first option "foo")
-                Workflow("complex-decisions", end)
+                Workflow("complex-decisions", end) -> first
             }
 
             val rando = GraphNode("rando", WorkflowJob(NoOpJob("rando")))
-            val first = GraphNode("decision-end", WorkflowDecision(List("foo" -> Predicates.BooleanProperty("bar"))))
+            val first = GraphNode("decision-end-end", WorkflowDecision(List("foo" -> Predicates.BooleanProperty("bar")), dec))
             val end = GraphNode("end", WorkflowEnd)
 
             rando.after = RefSet(first)
             first.before = RefSet(rando)
             first.decisionAfter = RefSet(end)
 
-            Flatten(ComplexDecision).values.toSet must_== Set(rando, first)
+            Flatten(complexDecision).values.toSet must_== Set(rando, first)
         }
 
         "work for decision with both routes going to same place not end" in {
-            def ComplexDecision = {
+            val (complexDecision, dec) = {
                 val first = Decision(
                     "foo" -> Predicates.BooleanProperty("bar")
                 ) dependsOn Start
                 val foo = NoOpJob("foo") dependsOn OneOf(first default, first option "foo")
                 val end = End dependsOn foo
-                Workflow("complex-decisions", end)
+                Workflow("complex-decisions", end) -> first
             }
 
-            val first = GraphNode("decision-foo", WorkflowDecision(List("foo" -> Predicates.BooleanProperty("bar"))))
-            val foo = GraphNode("foo", WorkflowJob(NoOpJob("foo")))
+            val first = GraphNode("decision-foo-foo", WorkflowDecision(List("foo" -> Predicates.BooleanProperty("bar")), dec))
+            val foo = GraphNode("foo", WorkflowJob(NoOpJob("foo")), RefSet(), RefSet(), RefSet(), RefSet(), Set("foo" -> dec, "default" -> dec))
             val end = GraphNode("end", WorkflowEnd)
 
             first.decisionAfter = RefSet(foo)
             foo.decisionBefore = RefSet(first)
             foo.after = RefSet(end)
 
-            Flatten(ComplexDecision).values.toSet must_== Set(foo, first)
+            Flatten(complexDecision).values.toSet must_== Set(foo, first)
         }
 
         "work with more complex decision" in {
+
+            val (moreComplexDecision, decNode) = {
+                val first = NoOpJob("first") dependsOn Start
+                val decision = Decision("route1" -> Predicates.AlwaysTrue) dependsOn first
+                val defaultRoute = {
+                    val default = NoOpJob("default") dependsOn (decision default)
+                    val default2 = NoOpJob("default2") dependsOn default
+                    default2
+                }
+                val option = NoOpJob("option") dependsOn (decision option "route1")
+                val second = NoOpJob("second") dependsOn OneOf(defaultRoute, option)
+                val done = End dependsOn second
+                Workflow("more-complex-decision", done) -> decision
+            }
+
             val first = GraphNode("first", WorkflowJob(NoOpJob("first")))
-            val decision = GraphNode("decision-option", WorkflowDecision(List("route1" -> Predicates.AlwaysTrue)))
-            val default = GraphNode("default", WorkflowJob(NoOpJob("default")), RefSet(), RefSet(), RefSet(), RefSet(), Some("default"))
+            val decision = GraphNode("decision-default-option", WorkflowDecision(List("route1" -> Predicates.AlwaysTrue), decNode))
+            val default = GraphNode("default", WorkflowJob(NoOpJob("default")), RefSet(), RefSet(), RefSet(), RefSet(), Set("default" -> decNode))
             val default2 = GraphNode("default2", WorkflowJob(NoOpJob("default2")), RefSet(), RefSet(), RefSet(), RefSet())
-            val option = GraphNode("option", WorkflowJob(NoOpJob("option")), RefSet(), RefSet(), RefSet(), RefSet(), Some("route1"))
+            val option = GraphNode("option", WorkflowJob(NoOpJob("option")), RefSet(), RefSet(), RefSet(), RefSet(), Set("route1" -> decNode))
             val second = GraphNode("second", WorkflowJob(NoOpJob("second")))
             val end = GraphNode("end", WorkflowEnd)
 
@@ -283,17 +308,34 @@ class FlattenSpec extends Specification {
             second.decisionBefore = RefSet(default2, option)
             second.after = RefSet(end)
 
-            Flatten(MoreComplexDecision).values.toSet must_== Set(first, decision, second, default, default2, option)
+            Flatten(moreComplexDecision).values.toSet must_== Set(first, decision, second, default, default2, option)
         }
 
         "work with multiple decisions" in {
+            val ((multipleDecision, dec1), dec2) = {
+                val first = NoOpJob("first") dependsOn Start
+                val dec = Decision(
+                    "route1" -> Predicates.AlwaysTrue
+                ) dependsOn first
+                val dec2 = Decision(
+                    "route1" -> Predicates.AlwaysTrue
+                ) dependsOn (dec default)
+                val job = NoOpJob("job") dependsOn (dec2 default)
+                val job2 = NoOpJob("job2") dependsOn (dec2 option "route1")
+                val job3 = NoOpJob("job3") dependsOn (dec option "route1")
+                val fourth = NoOpJob("fourth") dependsOn OneOf(job, job2, job3)
+                val end = End dependsOn fourth
+                Workflow("test", end) -> dec -> dec2
+            }
+
             val first = GraphNode("first", WorkflowJob(NoOpJob("first")))
-            val decision = GraphNode("decision-job3", WorkflowDecision(List("route1" -> Predicates.AlwaysTrue)))
-            val decision2 = GraphNode("decision-job2", WorkflowDecision(List("route1" -> Predicates.AlwaysTrue)), RefSet(), RefSet(), RefSet(), RefSet(), Some("default"))
-            val job = GraphNode("job", WorkflowJob(NoOpJob("job")), RefSet(), RefSet(), RefSet(), RefSet(), Some("default"))
-            val job2 = GraphNode("job2", WorkflowJob(NoOpJob("job2")), RefSet(), RefSet(), RefSet(), RefSet(), Some("route1"))
-            val job3 = GraphNode("job3", WorkflowJob(NoOpJob("job3")), RefSet(), RefSet(), RefSet(), RefSet(), Some("route1"))
+            val decision = GraphNode("decision-decision-job-job2-job3", WorkflowDecision(List("route1" -> Predicates.AlwaysTrue), dec1))
+            val decision2 = GraphNode("decision-job-job2", WorkflowDecision(List("route1" -> Predicates.AlwaysTrue), dec2), RefSet(), RefSet(), RefSet(), RefSet(), Set("default" -> dec1))
+            val job = GraphNode("job", WorkflowJob(NoOpJob("job")), RefSet(), RefSet(), RefSet(), RefSet(), Set("default" -> dec2))
+            val job2 = GraphNode("job2", WorkflowJob(NoOpJob("job2")), RefSet(), RefSet(), RefSet(), RefSet(), Set("route1" -> dec2))
+            val job3 = GraphNode("job3", WorkflowJob(NoOpJob("job3")), RefSet(), RefSet(), RefSet(), RefSet(), Set("route1" -> dec1))
             val fourth = GraphNode("fourth", WorkflowJob(NoOpJob("fourth")))
+            val end = GraphNode("end", WorkflowEnd)
 
             first.after = RefSet(decision)
             decision.before = RefSet(first)
@@ -307,7 +349,9 @@ class FlattenSpec extends Specification {
             job2.decisionAfter = RefSet(fourth)
             job3.decisionAfter = RefSet(fourth)
             fourth.decisionBefore = RefSet(job, job2, job3)
+            fourth.after = RefSet(end)
 
+            Flatten(multipleDecision).values.toSet must_== Set(first, decision, decision2, job, job2, job3, fourth)
         }
 
         "work with duplicate nodes" in {
@@ -368,10 +412,18 @@ class FlattenSpec extends Specification {
         }
 
         "work with syntactically sugared decision option" in {
+            val (sugarOption, dec) = {
+                val first = NoOpJob("first") dependsOn Start
+                val option = NoOpJob("option") dependsOn first doIf "doOption"
+                val second = NoOpJob("second") dependsOn Optional(option)
+                val done = End dependsOn second
+                Workflow("sugar-option-decision", done) -> option.dependency.parent
+            }
+
             val first = GraphNode("first", WorkflowJob(NoOpJob("first")))
-            val decision = GraphNode("decision-option", WorkflowDecision(List("option" -> Predicates.BooleanProperty("${doOption}"))))
-            val option = GraphNode("option", WorkflowJob(NoOpJob("option")), RefSet(), RefSet(), RefSet(), RefSet(), Some("option"), Some("${doOption}"))
-            val second = GraphNode("second", WorkflowJob(NoOpJob("second")), RefSet(), RefSet(), RefSet(), RefSet(), Some("default"))
+            val decision = GraphNode("decision-second-option", WorkflowDecision(List("${doOption}" -> Predicates.BooleanProperty("${doOption}")), dec))
+            val option = GraphNode("option", WorkflowJob(NoOpJob("option")), RefSet(), RefSet(), RefSet(), RefSet(), Set("${doOption}" -> dec))
+            val second = GraphNode("second", WorkflowJob(NoOpJob("second")), RefSet(), RefSet(), RefSet(), RefSet(), Set("default" -> dec))
             val end = GraphNode("end", WorkflowEnd)
 
             first.after = RefSet(decision)
@@ -382,16 +434,26 @@ class FlattenSpec extends Specification {
             second.decisionBefore = RefSet(decision, option)
             second.after = RefSet(end)
 
-            Flatten(SugarOption).values.toSet must_== Set(first, option, second, decision)
+            Flatten(sugarOption).values.toSet must_== Set(first, option, second, decision)
         }
 
         "work with syntactically sugared decision with multiple nodes in option route" in {
+            val (moreComplexSugarOption, dec) = {
+                val first = NoOpJob("first") dependsOn Start
+                val sub1 = NoOpJob("sub1") dependsOn first doIf "doSubWf"
+                val sub2 = NoOpJob("sub2") dependsOn sub1
+                val sub3 = NoOpJob("sub3") dependsOn sub2
+                val second = NoOpJob("second") dependsOn Optional(sub3)
+                val end = End dependsOn second
+                Workflow("more-complex-sugar-decision", end) -> sub1.dependency.parent
+            }
+
             val first = GraphNode("first", WorkflowJob(NoOpJob("first")))
-            val decision = GraphNode("decision-sub1", WorkflowDecision(List("sub1" -> Predicates.BooleanProperty("${doSubWf}"))))
-            val sub1 = GraphNode("sub1", WorkflowJob(NoOpJob("sub1")), RefSet(), RefSet(), RefSet(), RefSet(), Some("sub1"), Some("${doSubWf}"))
+            val decision = GraphNode("decision-second-sub1", WorkflowDecision(List("${doSubWf}" -> Predicates.BooleanProperty("${doSubWf}")), dec))
+            val sub1 = GraphNode("sub1", WorkflowJob(NoOpJob("sub1")), RefSet(), RefSet(), RefSet(), RefSet(), Set("${doSubWf}" -> dec))
             val sub2 = GraphNode("sub2", WorkflowJob(NoOpJob("sub2")))
             val sub3 = GraphNode("sub3", WorkflowJob(NoOpJob("sub3")))
-            val second = GraphNode("second", WorkflowJob(NoOpJob("second")), RefSet(), RefSet(), RefSet(), RefSet(), Some("default"))
+            val second = GraphNode("second", WorkflowJob(NoOpJob("second")), RefSet(), RefSet(), RefSet(), RefSet(), Set("default" -> dec))
             val end = GraphNode("end", WorkflowEnd)
 
             first.after = RefSet(decision)
@@ -406,16 +468,29 @@ class FlattenSpec extends Specification {
             second.decisionBefore = RefSet(decision, sub3)
             second.after = RefSet(end)
 
-            Flatten(MoreComplexSugarOption).values.toSet must_== Set(first, sub1, sub2, sub3, second, decision)
+            Flatten(moreComplexSugarOption).values.toSet must_== Set(first, sub1, sub2, sub3, second, decision)
         }
 
         "work with syntactically sugared decision and regular decision" in {
+
+            val ((decisionAndSugarOption, dec1), dec2) = {
+                val first = NoOpJob("first") dependsOn Start
+                val decision = Decision(
+                    "route1" -> Predicates.AlwaysTrue
+                ) dependsOn first
+                val option = NoOpJob("option") dependsOn (decision option "route1") doIf "doOption"
+                val default = NoOpJob("default") dependsOn Optional(option)
+                val default2 = NoOpJob("default2") dependsOn OneOf(decision default, default)
+                val end = End dependsOn default2
+                Workflow("mixed-decision-styles", end) -> decision -> option.dependency.parent
+            }
+
             val first = GraphNode("first", WorkflowJob(NoOpJob("first")))
-            val decision = GraphNode("decision-decision-option", WorkflowDecision(List("route1" -> Predicates.AlwaysTrue)))
-            val decision2 = GraphNode("decision-option", WorkflowDecision(List("option" -> Predicates.BooleanProperty("${doOption}"))), RefSet(), RefSet(), RefSet(), RefSet(), Some("route1"))
-            val option = GraphNode("option", WorkflowJob(NoOpJob("option")), RefSet(), RefSet(), RefSet(), RefSet(), Some("option"), Some("${doOption}"))
-            val default = GraphNode("default", WorkflowJob(NoOpJob("default")), RefSet(), RefSet(), RefSet(), RefSet(), Some("default"))
-            val default2 = GraphNode("default2", WorkflowJob(NoOpJob("default2")), RefSet(), RefSet(), RefSet(), RefSet(), Some("default"))
+            val decision = GraphNode("decision-default2-decision-default-option", WorkflowDecision(List("route1" -> Predicates.AlwaysTrue), dec1))
+            val decision2 = GraphNode("decision-default-option", WorkflowDecision(List("${doOption}" -> Predicates.BooleanProperty("${doOption}")), dec2), RefSet(), RefSet(), RefSet(), RefSet(), Set("route1" -> dec1))
+            val option = GraphNode("option", WorkflowJob(NoOpJob("option")), RefSet(), RefSet(), RefSet(), RefSet(), Set("${doOption}" -> dec2))
+            val default = GraphNode("default", WorkflowJob(NoOpJob("default")), RefSet(), RefSet(), RefSet(), RefSet(), Set("default" -> dec2))
+            val default2 = GraphNode("default2", WorkflowJob(NoOpJob("default2")), RefSet(), RefSet(), RefSet(), RefSet(), Set("default" -> dec1))
             val end = GraphNode("end", WorkflowEnd)
 
             first.after = RefSet(decision)
@@ -430,7 +505,7 @@ class FlattenSpec extends Specification {
             default2.decisionBefore = RefSet(decision, default)
             default2.after = RefSet(end)
 
-            Flatten(DecisionAndSugarOption).values.toSet must_== Set(first, option, decision, decision2, default, default2)
+            Flatten(decisionAndSugarOption).values.toSet must_== Set(first, option, decision, decision2, default, default2)
         }
 
         "work for node with custom error-to" in {
@@ -450,11 +525,20 @@ class FlattenSpec extends Specification {
         }
 
         "work with sugar option and optional sub workflow" in {
+            val (sugarOptionWithSubWf, dec) = {
+                val first = NoOpJob("first") dependsOn Start
+                val option = NoOpJob("option") dependsOn first doIf "doOption"
+                val optionalWf = SingleWorkflow dependsOn option
+                val default = NoOpJob("default") dependsOn Optional(optionalWf)
+                val end = End dependsOn default
+                Workflow("sugar-option-with-sub-wf", end) -> option.dependency.parent
+            }
+
             val first = GraphNode("first", WorkflowJob(NoOpJob("first")))
-            val decision = GraphNode("decision-option", WorkflowDecision(List("option" -> Predicates.BooleanProperty("${doOption}"))))
-            val option = GraphNode("option", WorkflowJob(NoOpJob("option")), RefSet(), RefSet(), RefSet(), RefSet(), Some("option"), Some("${doOption}"))
+            val decision = GraphNode("decision-default-option", WorkflowDecision(List("${doOption}" -> Predicates.BooleanProperty("${doOption}")), dec))
+            val option = GraphNode("option", WorkflowJob(NoOpJob("option")), RefSet(), RefSet(), RefSet(), RefSet(), Set("${doOption}" -> dec))
             val subWfFirst = GraphNode("start", WorkflowJob(NoOpJob("start")))
-            val default = GraphNode("default", WorkflowJob(NoOpJob("default")), RefSet(), RefSet(), RefSet(), RefSet(), Some("default"))
+            val default = GraphNode("default", WorkflowJob(NoOpJob("default")), RefSet(), RefSet(), RefSet(), RefSet(), Set("default" -> dec))
             val end = GraphNode("end", WorkflowEnd)
 
             first.after = RefSet(decision)
@@ -467,13 +551,19 @@ class FlattenSpec extends Specification {
             default.decisionBefore = RefSet(decision, subWfFirst)
             default.after = RefSet(end)
 
-            Flatten(SugarOptionWithSubWf).values.toSet must_== Set(first, decision, option, subWfFirst, default)
+            Flatten(sugarOptionWithSubWf).values.toSet must_== Set(first, decision, option, subWfFirst, default)
         }
 
         "work with sugar option from Start" in {
-            val decision = GraphNode("decision-option", WorkflowDecision(List("option" -> Predicates.BooleanProperty("${doOption}"))))
-            val option = GraphNode("option", WorkflowJob(NoOpJob("option")), RefSet(), RefSet(), RefSet(), RefSet(), Some("option"), Some("${doOption}"))
-            val default = GraphNode("default", WorkflowJob(NoOpJob("default")), RefSet(), RefSet(), RefSet(), RefSet(), Some("default"))
+            val (sugarOptionFromStart, dec) = {
+                val option = NoOpJob("option") dependsOn Start doIf "doOption"
+                val default = NoOpJob("default") dependsOn Optional(option)
+                val end = End dependsOn default
+                Workflow("sugar-option-from-start", end) -> option.dependency.parent
+            }
+            val decision = GraphNode("decision-default-option", WorkflowDecision(List("${doOption}" -> Predicates.BooleanProperty("${doOption}")), dec))
+            val option = GraphNode("option", WorkflowJob(NoOpJob("option")), RefSet(), RefSet(), RefSet(), RefSet(), Set("${doOption}" -> dec))
+            val default = GraphNode("default", WorkflowJob(NoOpJob("default")), RefSet(), RefSet(), RefSet(), RefSet(), Set("default" -> dec))
             val end = GraphNode("end", WorkflowEnd)
 
             decision.decisionAfter = RefSet(option, default)
@@ -482,13 +572,30 @@ class FlattenSpec extends Specification {
             default.decisionBefore = RefSet(decision, option)
             default.after = RefSet(end)
 
-            Flatten(SugarOptionFromStart).values.toSet must_== Set(decision, option, default)
+            Flatten(sugarOptionFromStart).values.toSet must_== Set(decision, option, default)
         }
 
         "work with nested wf with mult end nodes" in {
-            val decision = GraphNode("decision-option", WorkflowDecision(List("option" -> Predicates.BooleanProperty("${doOption}"))))
-            val option = GraphNode("option", WorkflowJob(NoOpJob("option")), RefSet(), RefSet(), RefSet(), RefSet(), Some("option"))
-            val default = GraphNode("default", WorkflowJob(NoOpJob("default")), RefSet(), RefSet(), RefSet(), RefSet(), Some("default"))
+
+            val (wfWithTwoEndNodes, dec) = {
+                val decision = Decision(
+                    "option" -> Predicates.BooleanProperty("${doOption}")
+                ) dependsOn Start
+                val option = NoOpJob("option") dependsOn (decision option "option")
+                val default = NoOpJob("default") dependsOn (decision default)
+                val end = End dependsOn OneOf(option, default)
+                Workflow("wf-with-mult-end-nodes", end) -> decision
+            }
+            val SubWfWithTwoEndNodes = {
+                val wf = wfWithTwoEndNodes dependsOn Start
+                val last = NoOpJob("last") dependsOn wf
+                val end = End dependsOn last
+                Workflow("nested-wf-with-mult-end-nodes", end)
+            }
+
+            val decision = GraphNode("decision-default-option", WorkflowDecision(List("option" -> Predicates.BooleanProperty("${doOption}")), dec))
+            val option = GraphNode("option", WorkflowJob(NoOpJob("option")), RefSet(), RefSet(), RefSet(), RefSet(), Set("option" -> dec))
+            val default = GraphNode("default", WorkflowJob(NoOpJob("default")), RefSet(), RefSet(), RefSet(), RefSet(), Set("default" -> dec))
             val last = GraphNode("last", WorkflowJob(NoOpJob("last")))
             val end = GraphNode("end", WorkflowEnd)
 
@@ -580,45 +687,6 @@ class FlattenSpec extends Specification {
         Workflow("nested-fork-join", fourth)
     }
 
-    def SimpleDecision = {
-        val first = NoOpJob("first") dependsOn Start
-        val decision = Decision("route1" -> Predicates.AlwaysTrue) dependsOn first
-        val default = NoOpJob("default") dependsOn (decision default)
-        val option = NoOpJob("option") dependsOn (decision option "route1")
-        val second = NoOpJob("second") dependsOn OneOf(default, option)
-        val done = End dependsOn second
-        Workflow("simple-decision", done)
-    }
-
-    def MoreComplexDecision = {
-        val first = NoOpJob("first") dependsOn Start
-        val decision = Decision("route1" -> Predicates.AlwaysTrue) dependsOn first
-        val defaultRoute = {
-            val default = NoOpJob("default") dependsOn (decision default)
-            val default2 = NoOpJob("default2") dependsOn default
-            default2
-        }
-        val option = NoOpJob("option") dependsOn (decision option "route1")
-        val second = NoOpJob("second") dependsOn OneOf(defaultRoute, option)
-        val done = End dependsOn second
-        Workflow("more-complex-decision", done)
-    }
-    def MultipleDecision = {
-        val first = NoOpJob("first") dependsOn Start
-        val dec = Decision(
-            "route1" -> Predicates.AlwaysTrue
-        ) dependsOn first
-        val dec2 = Decision(
-            "route1" -> Predicates.AlwaysTrue
-        ) dependsOn (dec default)
-        val job = NoOpJob("job") dependsOn (dec2 default)
-        val job2 = NoOpJob("job2") dependsOn (dec2 option "route1")
-        val job3 = NoOpJob("job3") dependsOn (dec option "route1")
-        val fourth = NoOpJob("fourth") dependsOn OneOf(job, job2, job3)
-        val end = End dependsOn fourth
-        Workflow("test", end)
-    }
-
     def ForkJoinOnly = {
         val startA = NoOpJob("startA") dependsOn Start
         val startB = NoOpJob("startB") dependsOn Start
@@ -643,75 +711,12 @@ class FlattenSpec extends Specification {
         Workflow("duplicate-sub-workflows", end)
     }
 
-    def SugarOption = {
-        val first = NoOpJob("first") dependsOn Start
-        val option = NoOpJob("option") dependsOn first doIf "doOption"
-        val second = NoOpJob("second") dependsOn (first andOptionally_: option)
-        val done = End dependsOn second
-        Workflow("sugar-option-decision", done)
-    }
-
-    def MoreComplexSugarOption = {
-        val first = NoOpJob("first") dependsOn Start
-        val sub1 = NoOpJob("sub1") dependsOn first doIf "doSubWf"
-        val sub2 = NoOpJob("sub2") dependsOn sub1
-        val sub3 = NoOpJob("sub3") dependsOn sub2
-        val second = NoOpJob("second") dependsOn (first andOptionally_: sub3)
-        val end = End dependsOn second
-        Workflow("more-complex-sugar-decision", end)
-    }
-
-    def DecisionAndSugarOption = {
-        val first = NoOpJob("first") dependsOn Start
-        val decision = Decision(
-            "route1" -> Predicates.AlwaysTrue
-        ) dependsOn first
-        val option = NoOpJob("option") dependsOn (decision option "route1") doIf "doOption"
-        val default = NoOpJob("default") dependsOn ((decision option "route1") andOptionally_: option)
-        val default2 = NoOpJob("default2") dependsOn OneOf(decision default, default)
-        val end = End dependsOn default2
-        Workflow("mixed-decision-styles", end)
-    }
-
     def CustomErrorTo = {
         val first = NoOpJob("first") dependsOn Start
         val errorOption = NoOpJob("errorOption") dependsOn (first error)
         val second = NoOpJob("second") dependsOn first
         val end = End dependsOn OneOf(second, errorOption)
         Workflow("custom-errorTo", end)
-    }
-
-    def SugarOptionWithSubWf = {
-        val first = NoOpJob("first") dependsOn Start
-        val option = NoOpJob("option") dependsOn first doIf "doOption"
-        val optionalWf = SingleWorkflow dependsOn option
-        val default = NoOpJob("default") dependsOn (first andOptionally_: optionalWf)
-        val end = End dependsOn default
-        Workflow("sugar-option-with-sub-wf", end)
-    }
-
-    def SugarOptionFromStart = {
-        val option = NoOpJob("option") dependsOn Start doIf "doOption"
-        val default = NoOpJob("default") dependsOn (Start andOptionally_: option)
-        val end = End dependsOn default
-        Workflow("sugar-option-from-start", end)
-    }
-
-    def SubWfWithTwoEndNodes = {
-        val wf = WfWithTwoEndNodes dependsOn Start
-        val last = NoOpJob("last") dependsOn wf
-        val end = End dependsOn last
-        Workflow("nested-wf-with-mult-end-nodes", end)
-    }
-
-    def WfWithTwoEndNodes = {
-        val decision = Decision(
-            "option" -> Predicates.BooleanProperty("${doOption}")
-        ) dependsOn Start
-        val option = NoOpJob("option") dependsOn (decision option "option")
-        val default = NoOpJob("default") dependsOn (decision default)
-        val end = End dependsOn OneOf(option, default)
-        Workflow("wf-with-mult-end-nodes", end)
     }
 
     def DisallowedNames = {

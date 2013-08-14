@@ -8,6 +8,7 @@ package dsl
 sealed trait Work {
     def dependsOn(dep1: Dependency, deps: Dependency*): Node = Node(this, List(dep1) ++ deps)
     def dependsOn(deps: Seq[Dependency]): Node = Node(this, deps.toList)
+    def dependsOn(sugarNode: SugarNode): SugarNode = SugarNode(this, sugarNode.dependency, Some(sugarNode))
 }
 
 case object End extends Work
@@ -20,11 +21,7 @@ case class Workflow(name: String, end: Node) extends Work
 
 case class Kill(name: String) extends Work
 
-sealed trait Dependency {
-
-    //for now: only supports single optional dependency
-    def andOptionally_:(dep: Dependency) = SugarOption(dep, List(this): _*)
-}
+sealed trait Dependency
 
 case class ForkDependency(name: String) extends Dependency
 
@@ -32,10 +29,6 @@ case class JoinDependency(name: String) extends Dependency
 
 case class Node(work: Work, dependencies: List[_ <: Dependency]) extends Dependency {
 
-    /*
-     * used when a route is optional (i.e. decision -> optional route -> default) 
-     * simplified to route doIf "predicate", default dependsOn parent andOptionally route
-     */
     def doIf(predicate: String) = {
         //make sure predicate string is in ${foo} format
         val Pattern = """[${].*[}]""".r
@@ -43,7 +36,8 @@ case class Node(work: Work, dependencies: List[_ <: Dependency]) extends Depende
             case Pattern() => predicate
             case _         => "${" + predicate + "}"
         }
-        Node(work, List(DoIf(formattedPredicate, dependencies.toSeq: _*)))
+        val decision = Decision(formattedPredicate -> Predicates.BooleanProperty(formattedPredicate)) dependsOn dependencies
+        SugarNode(work, decision option formattedPredicate)
     }
 
     def error = ErrorTo(this) //used to set a custom error-to on a node
@@ -53,7 +47,16 @@ case object Start extends Dependency
 
 case class OneOf(dep1: Dependency, deps: Dependency*) extends Dependency
 
-case class SugarOption(required: Dependency, optional: Dependency*) extends Dependency
+case class SugarNode(work: Work, dependency: DecisionDependency, previousSugarNode: Option[SugarNode] = None)
+
+object Optional {
+    def toNode(sugarNode: SugarNode): Node = sugarNode.previousSugarNode match {
+        case Some(previous) => Node(sugarNode.work, List(toNode(previous)))
+        case _              => Node(sugarNode.work, List(sugarNode.dependency))
+    }
+
+    def apply(sugarNode: SugarNode) = OneOf(sugarNode.dependency.parent default, toNode(sugarNode))
+}
 
 sealed trait Predicate
 

@@ -25,14 +25,14 @@ object DecisionSamples {
     def newDecisionSample = {
         val first = NoOpJob("first") dependsOn Start
         val optionalNode = NoOpJob("optional") dependsOn first doIf "${doOptionalNode}"
-        val alwaysDo = NoOpJob("always do") dependsOn (first andOptionally_: optionalNode)
+        val alwaysDo = NoOpJob("always do") dependsOn Optional(optionalNode)
         val optionalNode2 = {
             val sub1 = NoOpJob("sub1") dependsOn Start
             val sub2 = NoOpJob("sub2") dependsOn sub1
             val sub3 = NoOpJob("sub3") dependsOn sub2
             Workflow("sub-wf", sub3)
         } dependsOn alwaysDo doIf "{doSubWf}"
-        val alwaysDo2 = NoOpJob("always do 2") dependsOn (alwaysDo andOptionally_: optionalNode2)
+        val alwaysDo2 = NoOpJob("always do 2") dependsOn Optional(optionalNode2)
         val end = End dependsOn alwaysDo2
         Workflow("new-decision", end)
     }
@@ -313,7 +313,7 @@ object SimpleSamples {
     def SugarOption = {
         val first = MapReduceJob("first") dependsOn Start
         val option = MapReduceJob("option") dependsOn first doIf "doOption"
-        val second = MapReduceJob("second") dependsOn (first andOptionally_: option)
+        val second = MapReduceJob("second") dependsOn Optional(option)
         val done = End dependsOn second
         Workflow("sugar-option-decision", done)
     }

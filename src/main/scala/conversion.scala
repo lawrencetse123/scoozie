@@ -29,8 +29,7 @@ case class GraphNode(
     var after: RefSet[GraphNode],
     var decisionBefore: RefSet[GraphNode] = RefSet(),
     var decisionAfter: RefSet[GraphNode] = RefSet(),
-    var decisionRoutes: Set[(String, WorkflowOption)] = Set.empty,
-    var sugarDecisionRoute: Option[String] = None,
+    var decisionRoutes: Set[(String, DecisionNode)] = Set.empty,
     var errorTo: Option[GraphNode] = None) {
 
     def getName(n: GraphNode) = n.name
@@ -41,7 +40,7 @@ case class GraphNode(
     def decisionAfterNames = decisionAfter map (getName(_))
 
     override def toString =
-        s"GraphNode: name=[$name], option=[$workflowOption], before=[$beforeNames], after=[$afterNames], decisionBefore=[$decisionBeforeNames], decisionAfter=[$decisionAfterNames], decisionRoute=[$decisionRoutes], sugarDecision=[$sugarDecisionRoute], errorTo=[$errorTo]"
+        s"GraphNode: name=[$name], option=[$workflowOption], before=[$beforeNames], after=[$afterNames], decisionBefore=[$decisionBeforeNames], decisionAfter=[$decisionAfterNames], decisionRoute=[$decisionRoutes], errorTo=[$errorTo]"
 
     override def equals(any: Any): Boolean = {
         any match {
@@ -51,7 +50,6 @@ case class GraphNode(
                     this.beforeNames == node.beforeNames &&
                     this.afterNames == node.afterNames &&
                     this.decisionRoutes == node.decisionRoutes &&
-                    this.sugarDecisionRoute == node.sugarDecisionRoute &&
                     this.errorTo == node.errorTo &&
                     this.decisionAfterNames == node.decisionAfterNames &&
                     this.decisionBeforeNames == node.decisionBeforeNames
@@ -60,36 +58,39 @@ case class GraphNode(
     }
 
     override def hashCode: Int = {
-        Objects.hashCode(name, workflowOption, beforeNames, afterNames, decisionBeforeNames, decisionAfterNames, decisionRoutes, sugarDecisionRoute, errorTo)
+        Objects.hashCode(name, workflowOption, beforeNames, afterNames, decisionBeforeNames, decisionAfterNames, decisionRoutes, errorTo)
     }
 
     /*
      * Checks whether this GraphNode has the desired decisionRoute
      */
-    def containsDecisionRoute(predicateRoute: String): Boolean = {
-        // decisionRoute match {
-        //     case Some(decisionRoute) =>
-        //         decisionRoute == predicateRoute
-        //     case _ => false
-        // }
-
-        decisionRoutes contains (predicateRoute -> workflowOption)
+    def containsDecisionRoute(predicateRoute: String, decisionNode: DecisionNode): Boolean = {
+        decisionRoutes contains (predicateRoute -> decisionNode)
     }
 
     /*
      * Gets route node name for specified predicate route - Only applies for
      * Decisions
      */
-    def getDecisionRouteName(predicateRoute: String): String = {
+    private def nameRoutes(predicateRoutes: List[String]): String = {
         this.workflowOption match {
-            case WorkflowDecision(predicates) =>
-                decisionAfter.find(_.containsDecisionRoute(predicateRoute)) match {
-                    case Some(routeNode) =>
-                        routeNode.name
-                    case _ => "kill"
-                }
+            case WorkflowDecision(predicates, decisionNode) =>
+                predicateRoutes map { predicateRoute =>
+                    decisionAfter.find(_.containsDecisionRoute(predicateRoute, decisionNode)) match {
+                        case Some(routeNode) => routeNode.name
+                        case _               => "kill"
+                    }
+                } mkString "-"
             case _ => throw new RuntimeException("error: getting route from non-decision node")
         }
+    }
+
+    def getDecisionRouteName(predicateRoute: String): String = {
+        nameRoutes(List(predicateRoute))
+    }
+
+    def getDecisionName(predicateRoutes: List[String]): String = {
+        nameRoutes("default" :: predicateRoutes)
     }
 
     lazy val toXmlWorkflowOption: Set[DataRecord[WORKFLOWu45APPOption]] = {
@@ -121,7 +122,7 @@ case class GraphNode(
                         case Some(node) => node.name
                         case _          => "kill"
                     }))))
-            case WorkflowDecision(predicates) =>
+            case WorkflowDecision(predicates, _) =>
                 val defaultName = getDecisionRouteName("default")
                 val caseSeq = predicates map (pred => {
                     val route = getDecisionRouteName(pred._1)
@@ -147,7 +148,7 @@ sealed trait WorkflowOption
 
 case class WorkflowJob(job: Job) extends WorkflowOption
 
-case class WorkflowDecision(predicates: List[(String, dsl.Predicate)]) extends WorkflowOption
+case class WorkflowDecision(predicates: List[(String, dsl.Predicate)], decisionNode: DecisionNode) extends WorkflowOption
 
 case object WorkflowFork extends WorkflowOption
 

@@ -12,7 +12,7 @@ name := "scoozie"
 
 organization := "com.klout"
 
-version := "0.5.0"
+version := "0.5.1"
 
 scalaVersion := "2.10.2"
 

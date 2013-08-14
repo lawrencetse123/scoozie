@@ -146,7 +146,10 @@ object XMLVerification {
                 val decisionCasePairs = refCases.zip(targetCases)
                 decisionCasePairs.filterNot {
                     case (refCase, targetCase) =>
-                        (refCase.to == "end" && targetCase.to == "end") || areFunctionallySame(getNodeByName(refNodes, refCase.to), getNodeByName(targetNodes, targetCase.to), refNodes, targetNodes)
+                        val samePredicate = refCase.value == targetCase.value
+                        val bothToEnd = refCase.to == "end" && targetCase.to == "end"
+                        val functionallySame = areFunctionallySame(getNodeByName(refNodes, refCase.to), getNodeByName(targetNodes, targetCase.to), refNodes, targetNodes)
+                        samePredicate && (bothToEnd || functionallySame)
                 } isEmpty
             }
         }

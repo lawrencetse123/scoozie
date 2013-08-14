@@ -38,6 +38,10 @@ class XMLVerificationSpec extends Specification {
             XMLVerification.verify(multipleDecisionCaseWf, reOrderedDecisionCaseWf) must_== false
         }
 
+        "give false for decision with same paths different predicates" in {
+            XMLVerification.verify(multipleDecisionCaseWf, multipleDecisionCaseWf2) must_== false
+        }
+
         "give true for different-ordered fork paths" in {
             XMLVerification.verify(forkWf, reOrderedForkWf) must_== true
         }
@@ -218,6 +222,65 @@ class XMLVerificationSpec extends Specification {
         <decision name="decision">
             <switch>
                 <case to="hive_node">${doHive}</case>
+                <case to="hive_node2">${doHive2}</case>
+                <default to="end"/>
+            </switch>
+        </decision>
+        <action name="hive_node">
+            <hive xmlns="uri:oozie:hive-action:0.2">
+                <job-tracker>${jobTracker}</job-tracker>
+                <name-node>${nameNode}</name-node>
+                <job-xml>../hive-site.xml</job-xml>
+                <configuration>
+                    <property>
+                        <name>oozie.hive.defaults</name>
+                        <value>../hive-default.xml</value>
+                    </property>
+                </configuration>
+                <script>script.hql</script>
+                <param>dateString=${dateString}</param>
+                <param>param1=${param1}</param>
+                <param>param2=${param2}</param>
+                <param>param3=${param3}</param>
+                <file>../oozie-setup.hql</file>
+            </hive>
+            <ok to="end"/>
+            <error to="kill"/>
+        </action>
+        <action name="hive_node2">
+            <hive xmlns="uri:oozie:hive-action:0.2">
+                <job-tracker>${jobTracker}</job-tracker>
+                <name-node>${nameNode}</name-node>
+                <job-xml>../hive-site.xml</job-xml>
+                <configuration>
+                    <property>
+                        <name>oozie.hive.defaults</name>
+                        <value>../hive-default.xml</value>
+                    </property>
+                </configuration>
+                <script>script2.hql</script>
+                <param>dateString=${dateString}</param>
+                <param>param1=${param1}</param>
+                <param>param2=${param2}</param>
+                <param>param3=${param3}</param>
+                <file>../oozie-setup.hql</file>
+            </hive>
+            <ok to="end"/>
+            <error to="kill"/>
+        </action>
+        <kill name="kill">
+            <message>test failed, error message[${wf:errorMessage(wf:lastErrorNode())}]</message>
+        </kill>
+        <end name="end"/>
+    </workflow-app>
+    """
+
+    val multipleDecisionCaseWf2 = """
+    <workflow-app name="test" xmlns="uri:oozie:workflow:0.2">
+        <start to="decision"/>
+        <decision name="decision">
+            <switch>
+                <case to="hive_node">${doHive_other}</case>
                 <case to="hive_node2">${doHive2}</case>
                 <default to="end"/>
             </switch>

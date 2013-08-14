@@ -135,14 +135,14 @@ For example, consider the following workflow:
 	In this example, route1 (route1Start -> route1End) will be run if ${doRoute1} is evaluated to true.  Otherwise, route2 (route2Start -> route2End) will be run. Again, this reduces developer cognitive overhead as the developer only needs to consider the dependencies for one node at a time. Clearly "last" depends on only *one* of route1 and route2.  
 	More complex decision structures are supported by Oozie as well. Verification will be automatically performed on the decisions to make sure that the developer has included all routes and default routes for each decision.  
 
-	1. **Put some sugar on me - "doIf" and "andOptionally"**  
+	1. **Pour some sugar on me - "doIf" and "Optional"**  
 		A common design pattern for decisions is to have an "optional" route that may or may not be inserted into the workflow.  Scoozie has provided some sugar for making this special case easy to think about and specify in code.
     
 		```scala
 		def SugarOption = {
 		    val first = MapReduceJob("first") dependsOn Start
 		    val option = MapReduceJob("option") dependsOn first doIf "doOption"
-		    val second = MapReduceJob("second") dependsOn (first andOptionally_: option)
+		    val second = MapReduceJob("second") dependsOn Optional(option)
 		    val done = End dependsOn second
 		    Workflow("sugar-option-decision", done)
 		}

@@ -151,18 +151,19 @@ object Flatten {
                                 else {
                                     //remove "end" from lastNode's decisionAfter
                                     val end = lastNode.decisionAfter filter (_.workflowOption == WorkflowEnd) headOption
-                                    val decisionRoute = end match {
-                                        case Some(node) => node.decisionRoute
-                                        case _          => None
+                                    val decisionRoutes = end match {
+                                        case Some(node) => node.decisionRoutes
+                                        case _          => Set.empty
                                     }
                                     end foreach (lastNode.decisionAfter -= _)
                                     //add in new decisionAfter
                                     lastNode.decisionAfter ++= RefSet(after.toSeq)
                                     after foreach (after => {
-                                        after.decisionRoute match {
-                                            case None => after.decisionRoute = decisionRoute
-                                            case _    =>
-                                        }
+                                        // after.decisionRoute match {
+                                        //     case None => after.decisionRoute = decisionRoute
+                                        //     case _    =>
+                                        // }
+                                        after.decisionRoutes = (after.decisionRoutes ++ decisionRoutes)
                                     })
                                     lastNode.after = RefSet()
                                 }
@@ -197,7 +198,7 @@ object Flatten {
                             })
 
                         case SugarOption(required, optional @ _*) =>
-                            after foreach (_.decisionRoute = Some("default"))
+                            after foreach (_.decisionRoutes = ???) // Some("default")) ??
                             val predicates = List()
                             val decisionNode = GraphNode(
                                 "decision-",
@@ -234,7 +235,7 @@ object Flatten {
                             decision.workflowOption = WorkflowDecision(List(after.head.name -> dsl.Predicates.BooleanProperty(predicate)))
                             after foreach { n =>
                                 n.sugarDecisionRoute = Some(predicate)
-                                n.decisionRoute = Some(n.name)
+                                n.decisionRoutes = ??? //Some(n.name)
                             }
                             //find the last node in the optional route
                             getDecisionLeaves(after.head, defaultNode) foreach { n =>
@@ -264,7 +265,8 @@ object Flatten {
                             }
 
                         case DecisionDependency(parent, option) =>
-                            after foreach (_.decisionRoute = option orElse Some("default"))
+                            val additionalDecisionRoute = (option getOrElse "default") -> WorkflowDecision(parent.decision.predicates)
+                            after foreach (_.decisionRoutes += additionalDecisionRoute)
                             flatten0(parent, after)
 
                         case DecisionNode(decision, dependencies) =>

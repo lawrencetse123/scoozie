@@ -29,7 +29,7 @@ case class GraphNode(
     var after: RefSet[GraphNode],
     var decisionBefore: RefSet[GraphNode] = RefSet(),
     var decisionAfter: RefSet[GraphNode] = RefSet(),
-    var decisionRoute: Option[String] = None,
+    var decisionRoutes: Set[(String, WorkflowOption)] = Set.empty,
     var sugarDecisionRoute: Option[String] = None,
     var errorTo: Option[GraphNode] = None) {
 
@@ -41,7 +41,7 @@ case class GraphNode(
     def decisionAfterNames = decisionAfter map (getName(_))
 
     override def toString =
-        s"GraphNode: name=[$name], option=[$workflowOption], before=[$beforeNames], after=[$afterNames], decisionBefore=[$decisionBeforeNames], decisionAfter=[$decisionAfterNames], decisionRoute=[$decisionRoute], sugarDecision=[$sugarDecisionRoute], errorTo=[$errorTo]"
+        s"GraphNode: name=[$name], option=[$workflowOption], before=[$beforeNames], after=[$afterNames], decisionBefore=[$decisionBeforeNames], decisionAfter=[$decisionAfterNames], decisionRoute=[$decisionRoutes], sugarDecision=[$sugarDecisionRoute], errorTo=[$errorTo]"
 
     override def equals(any: Any): Boolean = {
         any match {
@@ -50,7 +50,7 @@ case class GraphNode(
                     this.workflowOption == node.workflowOption &&
                     this.beforeNames == node.beforeNames &&
                     this.afterNames == node.afterNames &&
-                    this.decisionRoute == node.decisionRoute &&
+                    this.decisionRoutes == node.decisionRoutes &&
                     this.sugarDecisionRoute == node.sugarDecisionRoute &&
                     this.errorTo == node.errorTo &&
                     this.decisionAfterNames == node.decisionAfterNames &&
@@ -60,18 +60,20 @@ case class GraphNode(
     }
 
     override def hashCode: Int = {
-        Objects.hashCode(name, workflowOption, beforeNames, afterNames, decisionBeforeNames, decisionAfterNames, decisionRoute, sugarDecisionRoute, errorTo)
+        Objects.hashCode(name, workflowOption, beforeNames, afterNames, decisionBeforeNames, decisionAfterNames, decisionRoutes, sugarDecisionRoute, errorTo)
     }
 
     /*
      * Checks whether this GraphNode has the desired decisionRoute
      */
     def containsDecisionRoute(predicateRoute: String): Boolean = {
-        decisionRoute match {
-            case Some(decisionRoute) =>
-                decisionRoute == predicateRoute
-            case _ => false
-        }
+        // decisionRoute match {
+        //     case Some(decisionRoute) =>
+        //         decisionRoute == predicateRoute
+        //     case _ => false
+        // }
+
+        decisionRoutes contains (predicateRoute -> workflowOption)
     }
 
     /*

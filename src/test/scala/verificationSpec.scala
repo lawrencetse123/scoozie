@@ -15,144 +15,144 @@ class VerificationSpec extends Specification {
 
     "Verification" should {
 
-        //unit tests for verifyForkJoins
-        "give verified for empty graph" in {
-            Verification.verifyForkJoins(Flatten(SimpleSamples.EmptyWorkflow).values.toSet) must beTrue
-        }
+        // //unit tests for verifyForkJoins
+        // "give verified for empty graph" in {
+        //     Verification.verifyForkJoins(Flatten(SimpleSamples.EmptyWorkflow).values.toSet) must beTrue
+        // }
 
-        "give verified for simple graph" in {
-            Verification.verifyForkJoins(Flatten(SimpleSamples.SimpleWorkflow).values.toSet) must beTrue
-        }
+        // "give verified for simple graph" in {
+        //     Verification.verifyForkJoins(Flatten(SimpleSamples.SimpleWorkflow).values.toSet) must beTrue
+        // }
 
-        "give verified for simple fork/join" in {
-            Verification.verifyForkJoins(Flatten(SimpleSamples.SimpleForkJoin).values.toSet) must beTrue
-        }
+        // "give verified for simple fork/join" in {
+        //     Verification.verifyForkJoins(Flatten(SimpleSamples.SimpleForkJoin).values.toSet) must beTrue
+        // }
 
-        "give verified for two simple fork/joins" in {
-            Verification.verifyForkJoins(Flatten(SimpleSamples.TwoSimpleForkJoins).values.toSet) must beTrue
-        }
+        // "give verified for two simple fork/joins" in {
+        //     Verification.verifyForkJoins(Flatten(SimpleSamples.TwoSimpleForkJoins).values.toSet) must beTrue
+        // }
 
-        "give unverified for graph with joins from different parent forks" in {
-            Verification.verifyForkJoins(Flatten(SimpleSamples.NestedForkJoinFs).values.toSet) must beFalse
-        }
+        // "give unverified for graph with joins from different parent forks" in {
+        //     Verification.verifyForkJoins(Flatten(SimpleSamples.NestedForkJoinFs).values.toSet) must beFalse
+        // }
 
-        "give verified for graph with joins inserted to make final join from same parent thread" in {
-            Verification.verifyForkJoins(Flatten(SimpleSamples.NestedForkJoinFs2).values.toSet) must beTrue
-        }
+        // "give verified for graph with joins inserted to make final join from same parent thread" in {
+        //     Verification.verifyForkJoins(Flatten(SimpleSamples.NestedForkJoinFs2).values.toSet) must beTrue
+        // }
 
-        "give unverified for graph with joins from different parent forks, but same grandparent fork" in {
-            Verification.verifyForkJoins(Flatten(SimpleSamples.NestedForkJoinFs3).values.toSet) must beFalse
-        }
+        // "give unverified for graph with joins from different parent forks, but same grandparent fork" in {
+        //     Verification.verifyForkJoins(Flatten(SimpleSamples.NestedForkJoinFs3).values.toSet) must beFalse
+        // }
 
-        "give unverified for graph with same # of forks and joins, but joins from different parent forks" in {
-            Verification.verifyForkJoins(Flatten(SimpleSamples.NestedForkJoinFs4).values.toSet) must beFalse
-        }
+        // "give unverified for graph with same # of forks and joins, but joins from different parent forks" in {
+        //     Verification.verifyForkJoins(Flatten(SimpleSamples.NestedForkJoinFs4).values.toSet) must beFalse
+        // }
 
-        "give verified for graph with simple fork / join and decisions" in {
-            Verification.verifyForkJoins(Flatten(SimpleDecisionForkJoin).values.toSet) must beTrue
-        }
+        // "give verified for graph with simple fork / join and decisions" in {
+        //     Verification.verifyForkJoins(Flatten(SimpleDecisionForkJoin).values.toSet) must beTrue
+        // }
 
-        //unit tests for repairForkJoins
-        "give repaired graph by adding join for oozie-disallowed input workflow" in {
+        // //unit tests for repairForkJoins
+        // "give repaired graph by adding join for oozie-disallowed input workflow" in {
 
-            val first = GraphNode("first", WorkflowJob(NoOpJob("first")))
-            val firstFork = GraphNode("fork-secondA-secondB", WorkflowFork)
-            val secondA = GraphNode("secondA", WorkflowJob(NoOpJob("secondA")))
-            val secondB = GraphNode("secondB", WorkflowJob(NoOpJob("secondB")))
-            val secondFork = GraphNode("fork-thirdA-thirdB", WorkflowFork)
-            val thirdA = GraphNode("thirdA", WorkflowJob(NoOpJob("thirdA")))
-            val thirdB = GraphNode("thirdB", WorkflowJob(NoOpJob("thirdB")))
-            val thirdC = GraphNode("thirdC", WorkflowJob(NoOpJob("thirdC")))
-            val firstJoin = GraphNode("join-thirdB-thirdA", WorkflowJoin)
-            val secondJoin = GraphNode("join-thirdA-thirdB-thirdC", WorkflowJoin)
-            val fourth = GraphNode("fourth", WorkflowJob(NoOpJob("fourth")))
-            val end = GraphNode("end", WorkflowEnd)
+        //     val first = GraphNode("first", WorkflowJob(NoOpJob("first")))
+        //     val firstFork = GraphNode("fork-secondA-secondB", WorkflowFork)
+        //     val secondA = GraphNode("secondA", WorkflowJob(NoOpJob("secondA")))
+        //     val secondB = GraphNode("secondB", WorkflowJob(NoOpJob("secondB")))
+        //     val secondFork = GraphNode("fork-thirdA-thirdB", WorkflowFork)
+        //     val thirdA = GraphNode("thirdA", WorkflowJob(NoOpJob("thirdA")))
+        //     val thirdB = GraphNode("thirdB", WorkflowJob(NoOpJob("thirdB")))
+        //     val thirdC = GraphNode("thirdC", WorkflowJob(NoOpJob("thirdC")))
+        //     val firstJoin = GraphNode("join-thirdB-thirdA", WorkflowJoin)
+        //     val secondJoin = GraphNode("join-thirdA-thirdB-thirdC", WorkflowJoin)
+        //     val fourth = GraphNode("fourth", WorkflowJob(NoOpJob("fourth")))
+        //     val end = GraphNode("end", WorkflowEnd)
 
-            first.after = RefSet(firstFork)
-            firstFork.before = RefSet(first)
-            firstFork.after = RefSet(secondA, secondB)
-            secondA.before = RefSet(firstFork)
-            secondA.after = RefSet(secondFork)
-            secondB.before = RefSet(firstFork)
-            secondB.after = RefSet(thirdC)
-            secondFork.before = RefSet(secondA)
-            secondFork.after = RefSet(thirdA, thirdB)
-            thirdA.before = RefSet(secondFork)
-            thirdA.after = RefSet(firstJoin)
-            thirdB.before = RefSet(secondFork)
-            thirdB.after = RefSet(firstJoin)
-            thirdC.before = RefSet(secondB)
-            thirdC.after = RefSet(secondJoin)
-            firstJoin.before = RefSet(thirdA, thirdB)
-            firstJoin.after = RefSet(secondJoin)
-            secondJoin.before = RefSet(firstJoin, thirdC)
-            secondJoin.after = RefSet(fourth)
-            fourth.before = RefSet(secondJoin)
-            fourth.after = RefSet(end)
+        //     first.after = RefSet(firstFork)
+        //     firstFork.before = RefSet(first)
+        //     firstFork.after = RefSet(secondA, secondB)
+        //     secondA.before = RefSet(firstFork)
+        //     secondA.after = RefSet(secondFork)
+        //     secondB.before = RefSet(firstFork)
+        //     secondB.after = RefSet(thirdC)
+        //     secondFork.before = RefSet(secondA)
+        //     secondFork.after = RefSet(thirdA, thirdB)
+        //     thirdA.before = RefSet(secondFork)
+        //     thirdA.after = RefSet(firstJoin)
+        //     thirdB.before = RefSet(secondFork)
+        //     thirdB.after = RefSet(firstJoin)
+        //     thirdC.before = RefSet(secondB)
+        //     thirdC.after = RefSet(secondJoin)
+        //     firstJoin.before = RefSet(thirdA, thirdB)
+        //     firstJoin.after = RefSet(secondJoin)
+        //     secondJoin.before = RefSet(firstJoin, thirdC)
+        //     secondJoin.after = RefSet(fourth)
+        //     fourth.before = RefSet(secondJoin)
+        //     fourth.after = RefSet(end)
 
-            val graphNodes = Flatten(OozieNotAllowed2).values.toSet
+        //     val graphNodes = Flatten(OozieNotAllowed2).values.toSet
 
-            Verification.repairForkJoins(graphNodes, true) must_== Set(first, firstFork, secondA, secondB, secondFork, thirdA, thirdB, thirdC, firstJoin, secondJoin, fourth)
-        }
+        //     Verification.repairForkJoins(graphNodes, true) must_== Set(first, firstFork, secondA, secondB, secondFork, thirdA, thirdB, thirdC, firstJoin, secondJoin, fourth)
+        // }
 
-        "give repaired graph by adding 2 joins for oozie-disallowed input workflow" in {
+        // "give repaired graph by adding 2 joins for oozie-disallowed input workflow" in {
 
-            val first = GraphNode("first", WorkflowJob(NoOpJob("first")))
-            val firstFork = GraphNode("fork-secondA-secondB", WorkflowFork)
-            val secondA = GraphNode("secondA", WorkflowJob(NoOpJob("secondA")))
-            val secondB = GraphNode("secondB", WorkflowJob(NoOpJob("secondB")))
-            val secondFork = GraphNode("fork-thirdA-thirdB", WorkflowFork)
-            val thirdFork = GraphNode("fork-thirdC-thirdD", WorkflowFork)
-            val thirdA = GraphNode("thirdA", WorkflowJob(NoOpJob("thirdA")))
-            val thirdB = GraphNode("thirdB", WorkflowJob(NoOpJob("thirdB")))
-            val thirdC = GraphNode("thirdC", WorkflowJob(NoOpJob("thirdC")))
-            val thirdD = GraphNode("thirdD", WorkflowJob(NoOpJob("thirdD")))
-            val firstJoin = GraphNode("join-thirdB-thirdA", WorkflowJoin)
-            val secondJoin = GraphNode("join-thirdD-thirdC", WorkflowJoin)
-            val thirdJoin = GraphNode("join-thirdA-thirdB-thirdC-thirdD", WorkflowJoin)
+        //     val first = GraphNode("first", WorkflowJob(NoOpJob("first")))
+        //     val firstFork = GraphNode("fork-secondA-secondB", WorkflowFork)
+        //     val secondA = GraphNode("secondA", WorkflowJob(NoOpJob("secondA")))
+        //     val secondB = GraphNode("secondB", WorkflowJob(NoOpJob("secondB")))
+        //     val secondFork = GraphNode("fork-thirdA-thirdB", WorkflowFork)
+        //     val thirdFork = GraphNode("fork-thirdC-thirdD", WorkflowFork)
+        //     val thirdA = GraphNode("thirdA", WorkflowJob(NoOpJob("thirdA")))
+        //     val thirdB = GraphNode("thirdB", WorkflowJob(NoOpJob("thirdB")))
+        //     val thirdC = GraphNode("thirdC", WorkflowJob(NoOpJob("thirdC")))
+        //     val thirdD = GraphNode("thirdD", WorkflowJob(NoOpJob("thirdD")))
+        //     val firstJoin = GraphNode("join-thirdB-thirdA", WorkflowJoin)
+        //     val secondJoin = GraphNode("join-thirdD-thirdC", WorkflowJoin)
+        //     val thirdJoin = GraphNode("join-thirdA-thirdB-thirdC-thirdD", WorkflowJoin)
 
-            first.after = RefSet(firstFork)
-            firstFork.before = RefSet(first)
-            firstFork.after = RefSet(secondA, secondB)
-            secondA.before = RefSet(firstFork)
-            secondA.after = RefSet(secondFork)
-            secondB.before = RefSet(firstFork)
-            secondB.after = RefSet(thirdFork)
-            secondFork.before = RefSet(secondA)
-            secondFork.after = RefSet(thirdA, thirdB)
-            thirdFork.before = RefSet(secondB)
-            thirdFork.after = RefSet(thirdC, thirdD)
-            thirdA.before = RefSet(secondFork)
-            thirdA.after = RefSet(firstJoin)
-            thirdB.before = RefSet(secondFork)
-            thirdB.after = RefSet(firstJoin)
-            thirdC.before = RefSet(thirdFork)
-            thirdC.after = RefSet(secondJoin)
-            thirdD.before = RefSet(thirdFork)
-            thirdD.after = RefSet(secondJoin)
-            firstJoin.before = RefSet(thirdA, thirdB)
-            firstJoin.after = RefSet(thirdJoin)
-            secondJoin.before = RefSet(thirdC, thirdD)
-            secondJoin.after = RefSet(thirdJoin)
-            thirdJoin.before = RefSet(firstJoin, secondJoin)
+        //     first.after = RefSet(firstFork)
+        //     firstFork.before = RefSet(first)
+        //     firstFork.after = RefSet(secondA, secondB)
+        //     secondA.before = RefSet(firstFork)
+        //     secondA.after = RefSet(secondFork)
+        //     secondB.before = RefSet(firstFork)
+        //     secondB.after = RefSet(thirdFork)
+        //     secondFork.before = RefSet(secondA)
+        //     secondFork.after = RefSet(thirdA, thirdB)
+        //     thirdFork.before = RefSet(secondB)
+        //     thirdFork.after = RefSet(thirdC, thirdD)
+        //     thirdA.before = RefSet(secondFork)
+        //     thirdA.after = RefSet(firstJoin)
+        //     thirdB.before = RefSet(secondFork)
+        //     thirdB.after = RefSet(firstJoin)
+        //     thirdC.before = RefSet(thirdFork)
+        //     thirdC.after = RefSet(secondJoin)
+        //     thirdD.before = RefSet(thirdFork)
+        //     thirdD.after = RefSet(secondJoin)
+        //     firstJoin.before = RefSet(thirdA, thirdB)
+        //     firstJoin.after = RefSet(thirdJoin)
+        //     secondJoin.before = RefSet(thirdC, thirdD)
+        //     secondJoin.after = RefSet(thirdJoin)
+        //     thirdJoin.before = RefSet(firstJoin, secondJoin)
 
-            val graphNodes = Flatten(OozieNotAllowed3).values.toSet
+        //     val graphNodes = Flatten(OozieNotAllowed3).values.toSet
 
-            Verification.repairForkJoins(graphNodes, true) must_== Set(first, firstFork, secondFork, thirdFork, secondA, secondB, thirdA, thirdB, thirdC, thirdD, firstJoin, secondJoin, thirdJoin)
-        }
+        //     Verification.repairForkJoins(graphNodes, true) must_== Set(first, firstFork, secondFork, thirdFork, secondA, secondB, thirdA, thirdB, thirdC, thirdD, firstJoin, secondJoin, thirdJoin)
+        // }
 
-        //unit tests for verifying decisions
-        "give valid result for simple decision" in {
-            Verification.verifyDecisions(Flatten(simpleValidDecision).values.toSet) must beTrue
-        }
+        // //unit tests for verifying decisions
+        // "give valid result for simple decision" in {
+        //     Verification.verifyDecisions(Flatten(simpleValidDecision).values.toSet) must beTrue
+        // }
 
-        "give invalid result for invalid simple decision" in {
-            Verification.verifyDecisions(Flatten(simpleInvalidDecision).values.toSet) must beFalse
-        }
+        // "give invalid result for invalid simple decision" in {
+        //     Verification.verifyDecisions(Flatten(simpleInvalidDecision).values.toSet) must beFalse
+        // }
 
-        "give invalid result for second invalid simple decision" in {
-            Verification.verifyDecisions(Flatten(simpleInvalidDecision2).values.toSet) must beFalse
-        }
+        // "give invalid result for second invalid simple decision" in {
+        //     Verification.verifyDecisions(Flatten(simpleInvalidDecision2).values.toSet) must beFalse
+        // }
 
         "give valid for both decision nodes going to end" in {
             def complexDecisions = {

@@ -55,7 +55,10 @@ abstract class ScoozieApp(
         val oozieUrl = propertyMap.get("scoozie.oozie.url").get
         val config = OozieConfig(oozieUrl, propertyMap)
         //run
-        RunWorkflow(wf, appPath, config, postprocessing)
+        RunWorkflow(wf, appPath, config, postprocessing) match {
+            case Left(_)  => throw new RuntimeException("error: workflow execution failed")
+            case Right(_) => Unit
+        }
     }
 }
 
@@ -179,6 +182,10 @@ case class RetryableOozieClient(client: OozieClient) {
         () => client.getJobInfo(jobId)
     }
 
+    def getJobLog(jobId: String): String = Helpers.retryable {
+        () => client.getJobLog(jobId)
+    }
+
 }
 
 case class XmlPostProcessing(
@@ -191,9 +198,13 @@ object XmlPostProcessing {
     )
 }
 
+case class OozieSuccess(jobId: String)
+
+case class OozieError(jobId: String, jobLog: String, consoleUrl: String)
+
 object RunWorkflow {
 
-    def apply(workflow: Workflow, appPath: String, config: OozieConfig, postprocessing: Option[XmlPostProcessing]) = {
+    def apply(workflow: Workflow, appPath: String, config: OozieConfig, postprocessing: Option[XmlPostProcessing]): Either[OozieError, OozieSuccess] = {
         prepWorkflow(workflow, appPath, config.properties, postprocessing)
         execWorkflow(appPath, config)
     }
@@ -246,7 +257,7 @@ object RunWorkflow {
     /*
      * Executes the workflow, retrying if necessary
      */
-    def execWorkflow(appPath: String, config: OozieConfig) = {
+    def execWorkflow(appPath: String, config: OozieConfig): Either[OozieError, OozieSuccess] = {
 
         val oc = RetryableOozieClient(new OozieClient(config.oozieUrl))
         // create a workflow job configuration and set the workflow application path
@@ -257,9 +268,10 @@ object RunWorkflow {
         //submit and start the workflow job
         val jobId: String = oc.run(conf);
         val wfJob: WorkflowJob = oc.getJobInfo(jobId)
+        val consoleUrl: String = wfJob.getConsoleUrl
         println(s"Workflow job $jobId submitted and running")
-        println("Worflow: " + wfJob.getAppName + " at " + wfJob.getAppPath)
-        println("Console URL: " + wfJob.getConsoleUrl)
+        println("Workflow: " + wfJob.getAppName + " at " + wfJob.getAppPath)
+        println("Console URL: " + consoleUrl)
         // wait until the workflow job finishes, printing the status every 5 seconds
         while (oc.getJobInfo(jobId).getStatus() == WorkflowJob.Status.RUNNING) {
             println("Workflow job running ...")
@@ -273,8 +285,11 @@ object RunWorkflow {
         // print the final status to the workflow job
         println("Workflow job completed ...")
         println(oc.getJobInfo(jobId))
-        if (oc.getJobInfo(jobId).getStatus() != WorkflowJob.Status.SUCCEEDED)
-            throw new RuntimeException("error: workflow execution failed")
+        if (oc.getJobInfo(jobId).getStatus() != WorkflowJob.Status.SUCCEEDED) {
+            Left(OozieError(jobId, oc.getJobLog(jobId), consoleUrl))
+        } else {
+            Right(OozieSuccess(jobId))
+        }
     }
 
     def getXMLString(workflow: Workflow, postprocessing: Option[XmlPostProcessing] = Some(XmlPostProcessing.Default)): String = {

@@ -12,7 +12,7 @@ name := "scoozie"
 
 organization := "com.klout"
 
-version := "0.5.2"
+version := "0.5.3"
 
 scalaVersion := "2.10.2"
 
@@ -31,7 +31,8 @@ mergeStrategy in assembly <<= (mergeStrategy in assembly) { (old) =>
 libraryDependencies ++= Seq(
     "org.specs2" %% "specs2" % "1.14" % "test",
     "com.google.guava" % "guava" % "14.0.1",
-    "com.yahoo.oozie" % "oozie" % "2.3.0-cdh3u0" exclude ("org.apache.thrift", "libfb303"), //this excluded jar is corrupted
+    "org.apache.oozie" % "oozie-client" % "3.3.0-cdh4.2.0",
+    "org.apache.oozie" % "oozie-core" % "3.3.0-cdh4.2.0",
     "org.apache.hadoop" % "hadoop-common" % "2.0.0-cdh4.1.4",
     // The following jank is needed because of: https://issues.apache.org/jira/browse/DAEMON-277
     "org.apache.hadoop" % "hadoop-hdfs" % "2.0.0-cdh4.1.4" exclude("commons-daemon", "commons-daemon")

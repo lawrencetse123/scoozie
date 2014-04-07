@@ -202,7 +202,50 @@ case class OozieSuccess(jobId: String)
 
 case class OozieError(jobId: String, jobLog: String, consoleUrl: String)
 
+case class AsyncOozieWorkflow(oc: RetryableOozieClient, jobId: String, consoleUrl: String) {
+    def jobInfo(): WorkflowJob = oc.getJobInfo(jobId)
+
+    def jobLog(): String = oc.getJobLog(jobId)
+
+    def isRunning(): Boolean = (jobInfo.getStatus() == WorkflowJob.Status.RUNNING)
+
+    def isSuccess(): Boolean = (jobInfo.getStatus() == WorkflowJob.Status.SUCCEEDED)
+
+    def actions(): List[WorkflowAction] = jobInfo().getActions.asScala.toList
+
+    def successOrFail(): Either[OozieError, OozieSuccess] = {
+        if (!this.isSuccess()) {
+            Left(OozieError(jobId, jobLog(), consoleUrl))
+        } else {
+            Right(OozieSuccess(jobId))
+        }
+    }
+}
+
 object RunWorkflow {
+    val SleepInterval = 5000
+
+    def sequence[T](workflowMap: Map[T, AsyncOozieWorkflow]): Map[T, Either[OozieError, OozieSuccess]] = {
+        val workflows = workflowMap map (_._2)
+
+        while (workflows exists (_.isRunning)) {
+            println("Workflow job running ...")
+            workflows flatMap (_.actions) filter (_.getStatus == WorkflowAction.Status.RUNNING) foreach (action => {
+                val now = new Date
+                println(now + " " + action)
+            })
+            Thread.sleep(SleepInterval)
+        }
+        // print the final status to the workflow job
+        println("Workflow jobs completed ...")
+        workflows foreach (a => println(a.jobInfo()))
+        workflowMap mapValues (_.successOrFail())
+    }
+
+    def async(workflow: Workflow, appPath: String, config: OozieConfig, postprocessing: Option[XmlPostProcessing]): AsyncOozieWorkflow = {
+        prepWorkflow(workflow, appPath, config.properties, postprocessing)
+        getOozieWorkflow(appPath, config)
+    }
 
     def apply(workflow: Workflow, appPath: String, config: OozieConfig, postprocessing: Option[XmlPostProcessing]): Either[OozieError, OozieSuccess] = {
         prepWorkflow(workflow, appPath, config.properties, postprocessing)
@@ -257,8 +300,7 @@ object RunWorkflow {
     /*
      * Executes the workflow, retrying if necessary
      */
-    def execWorkflow(appPath: String, config: OozieConfig): Either[OozieError, OozieSuccess] = {
-
+    def getOozieWorkflow(appPath: String, config: OozieConfig): AsyncOozieWorkflow = {
         val oc = RetryableOozieClient(new OozieClient(config.oozieUrl))
         // create a workflow job configuration and set the workflow application path
         val conf = oc.createConfiguration()
@@ -272,23 +314,16 @@ object RunWorkflow {
         println(s"Workflow job $jobId submitted and running")
         println("Workflow: " + wfJob.getAppName + " at " + wfJob.getAppPath)
         println("Console URL: " + consoleUrl)
-        // wait until the workflow job finishes, printing the status every 5 seconds
-        while (oc.getJobInfo(jobId).getStatus() == WorkflowJob.Status.RUNNING) {
-            println("Workflow job running ...")
-            val actions: List[WorkflowAction] = oc.getJobInfo(jobId).getActions.asScala.toList
-            actions filter (_.getStatus == WorkflowAction.Status.RUNNING) foreach (action => {
-                val now = new Date
-                println(now + " " + action)
-            })
-            Thread.sleep(5 * 1000)
-        }
-        // print the final status to the workflow job
-        println("Workflow job completed ...")
-        println(oc.getJobInfo(jobId))
-        if (oc.getJobInfo(jobId).getStatus() != WorkflowJob.Status.SUCCEEDED) {
-            Left(OozieError(jobId, oc.getJobLog(jobId), consoleUrl))
-        } else {
-            Right(OozieSuccess(jobId))
+        AsyncOozieWorkflow(oc, jobId, consoleUrl)
+    }
+
+    def execWorkflow(appPath: String, config: OozieConfig): Either[OozieError, OozieSuccess] = {
+
+        val async = getOozieWorkflow(appPath, config)
+
+        sequence(Map("blah" -> async)).map(_._2).toList.headOption match {
+            case Some(result) => result
+            case _            => async.successOrFail()
         }
     }
 

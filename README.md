@@ -201,3 +201,4 @@ For example, consider the following workflow:
 Additional Help
 --------------
 More example scoozie code can be found in samples.scala. Available job definitions can be found in jobs.scala.  These jobs can be easily extended to fit your specific use cases.
+

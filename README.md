@@ -24,6 +24,11 @@ Problems that Scoozie solves:
    be the source of truth for any workflow
 
 
+Version:
+-------------
+As of version 0.5.6, scoozie has been upgraded to cdh5.3.3. Please depend on an earlier scoozie version to support lower versions of CDH libraries. 
+
+
 How it works:
 -------------
 

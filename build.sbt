@@ -12,7 +12,7 @@ name := "scoozie"
 
 organization := "com.klout"
 
-version := "0.5.5"
+version := "0.5.6"
 
 scalaVersion := "2.10.4"
 
@@ -31,9 +31,9 @@ mergeStrategy in assembly <<= (mergeStrategy in assembly) { (old) =>
 libraryDependencies ++= Seq(
     "org.specs2" %% "specs2-core" % "2.4.11" % "test",
     "com.google.guava" % "guava" % "18.0",
-    "org.apache.oozie" % "oozie-client" % "3.3.2-cdh4.7.0",
-    "org.apache.oozie" % "oozie-core" % "3.3.2-cdh4.7.0",
-    "org.apache.hadoop" % "hadoop-common" % "2.0.0-cdh4.7.0"
+    "org.apache.oozie" % "oozie-client" % "4.0.0-cdh5.3.3",
+    "org.apache.oozie" % "oozie-core" % "4.0.0-cdh5.3.3",
+    "org.apache.hadoop" % "hadoop-common" % "2.5.0-cdh5.3.3"
 )
 
 

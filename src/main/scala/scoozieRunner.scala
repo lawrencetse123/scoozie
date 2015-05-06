@@ -258,7 +258,7 @@ object RunWorkflow {
         val appPath: Path = new Path(resolvedAppPath)
         //write xml file to hdfs
         val conf = new Configuration()
-        conf.set("fs.default.name", properties.get("nameNode") match {
+        conf.set("fs.defaultFs", properties.get("nameNode") match {
             case Some(prop) => prop
             case _          => throw new RuntimeException("error: no name node set")
         })

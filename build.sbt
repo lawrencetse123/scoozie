@@ -14,7 +14,7 @@ organization := "com.klout"
 
 version := "0.5.6"
 
-scalaVersion := "2.10.4"
+scalaVersion := "2.11.7"
 
 mergeStrategy in assembly <<= (mergeStrategy in assembly) { (old) =>
     {
@@ -29,11 +29,13 @@ mergeStrategy in assembly <<= (mergeStrategy in assembly) { (old) =>
 }
 
 libraryDependencies ++= Seq(
-    "org.specs2" %% "specs2-core" % "2.4.11" % "test",
-    "com.google.guava" % "guava" % "18.0",
+    "org.specs2" %% "specs2-core" % "3.6.6" % "test",
+    "com.google.guava" % "guava" % "19.0",
     "org.apache.oozie" % "oozie-client" % "4.0.0-cdh5.3.3",
     "org.apache.oozie" % "oozie-core" % "4.0.0-cdh5.3.3",
-    "org.apache.hadoop" % "hadoop-common" % "2.5.0-cdh5.3.3"
+    "org.apache.hadoop" % "hadoop-common" % "2.5.0-cdh5.3.3",
+    "org.scala-lang.modules" %% "scala-xml" % "1.0.5",
+    "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4"
 )
 
 
@@ -53,7 +55,7 @@ ScalariformKeys.preferences := FormattingPreferences().
     setPreference(PreserveSpaceBeforeArguments, true)
 
 scalaxbSettings
- 
+
 sourceGenerators in Compile <+= scalaxb in Compile
 
 packageName in scalaxb in Compile := "workflow"

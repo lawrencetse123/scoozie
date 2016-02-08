@@ -2,11 +2,9 @@
  * Copyright (C) 2013 Klout Inc. <http://www.klout.com>
  */
 
-package com.klout.scoozie
-package verification
+package com.klout.scoozie.verification
 
-import conversion._
-import jobs._
+import com.klout.scoozie.conversion._
 
 case class VerificationNode(graphNode: GraphNode, parentThreads: Seq[ForkThread])
 
@@ -37,7 +35,7 @@ object Verification {
         val verifiedDecisions = decisions filter (dec => {
             val (predicates, foundOptions) = dec.workflowOption match {
                 case WorkflowDecision(predicates, myDecNode) =>
-                    val options = predicates.filter (currPred => {
+                    val options = predicates.filter(currPred => {
                         val containsPred = dec.decisionAfter.exists(_.decisionRoutes exists {
                             case (route, decisionNode) => route == currPred._1 && decisionNode == myDecNode
                         })
@@ -63,20 +61,20 @@ object Verification {
         verifiedDecisions.size == decisions.size
     }
 
-    /* 
-	 * From the Oozie spec: 
-	 * "The fork and join nodes must be used in pairs. 
-	 * The join node assumes concurrent execution paths are children of the same fork node."
-	 * (http://oozie.apache.org/docs/3.2.0-incubating/WorkflowFunctionalSpec.html#a3.1.5_Fork_and_Join_Control_Nodes)
-	 */
+    /*
+* From the Oozie spec:
+* "The fork and join nodes must be used in pairs.
+* The join node assumes concurrent execution paths are children of the same fork node."
+* (http://oozie.apache.org/docs/3.2.0-incubating/WorkflowFunctionalSpec.html#a3.1.5_Fork_and_Join_Control_Nodes)
+*/
     def verifyForkJoins(graph: Set[GraphNode]): Boolean = {
         getBadJoins(graph) isEmpty
     }
 
     /*
-     * Reworks graph to create workflow that oozie will allow
-     * Should only be used if verifyForkJoins fails
-     */
+* Reworks graph to create workflow that oozie will allow
+* Should only be used if verifyForkJoins fails
+*/
     def repairForkJoins(graph: Set[GraphNode], repairAutomatically: Boolean = false, defaultPath: String = "${outputDataRoot}"): Set[GraphNode] = {
         val ln = io.Source.stdin.getLines
         if (!repairAutomatically) {
@@ -88,7 +86,7 @@ object Verification {
             }
         }
         var resultGraph = graph
-        while (!(getBadJoins(resultGraph) isEmpty)) {
+        while (getBadJoins(resultGraph).nonEmpty) {
             val startNodes = (resultGraph filter (n => Flatten.isStartNode(n))).toSet
             val vNodes = generateVerificationNodes(startNodes)
             val badJoin: VerificationNode = getFirstBadJoin(resultGraph)
@@ -107,8 +105,8 @@ object Verification {
     }
 
     /*
-     * Returns a set of joins that violate Oozie's fork/join pair requirement
-     */
+* Returns a set of joins that violate Oozie's fork/join pair requirement
+*/
     def getBadJoins(graph: Set[GraphNode]): Set[VerificationNode] = {
 
         var badJoins: RefSet[VerificationNode] = RefSet()
@@ -146,8 +144,8 @@ object Verification {
     }
 
     /*
-     * Generates a graph of VerificationNodes from a graph of GraphNodes
-     */
+* Generates a graph of VerificationNodes from a graph of GraphNodes
+*/
     def generateVerificationNodes(startNodes: Set[GraphNode]): Set[VerificationNode] = {
 
         def generateVerificationNodes0(currNode: VerificationNode): Set[VerificationNode] = {
@@ -168,8 +166,8 @@ object Verification {
     }
 
     /*
-     * Get bad join that is closest to the "top" of the workflow tree
-     */
+* Get bad join that is closest to the "top" of the workflow tree
+*/
     def getFirstBadJoin(graph: Set[GraphNode]): VerificationNode = {
 
         val badJoins = getBadJoins(graph)
@@ -183,19 +181,19 @@ object Verification {
     }
 
     /*
-     * Requires: node's VerificationNode representation is contained in vNodes
-     *
-     * Returns the VerificationNode representation of node
-     */
+* Requires: node's VerificationNode representation is contained in vNodes
+*
+* Returns the VerificationNode representation of node
+*/
     def getVNode(vNodes: Set[VerificationNode], node: GraphNode): VerificationNode = {
 
         vNodes.find(n => n.graphNode == node).getOrElse(throw new RuntimeException("target node not contained in set of verification nodes"))
     }
 
-    /* 
-     * If a bad join can be fixed by simply adding another join, does so. 
-     * If not, returns input graph 
-     */
+    /*
+* If a bad join can be fixed by simply adding another join, does so.
+* If not, returns input graph
+*/
     def addJoin(badJoin: VerificationNode, graph: Set[GraphNode], vNodes: Set[VerificationNode]): Set[GraphNode] = {
         var resultGraph = graph
         val parentVNodes: Set[VerificationNode] = badJoin.graphNode.before map ((currNode: GraphNode) => getVNode(vNodes, currNode))

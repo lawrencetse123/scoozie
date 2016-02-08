@@ -2,11 +2,10 @@
  * Copyright (C) 2013 Klout Inc. <http://www.klout.com>
  */
 
-package com.klout.scoozie
-package samples
+package com.klout.scoozie.examples
 
-import dsl._
-import jobs._
+import com.klout.scoozie.dsl._
+import com.klout.scoozie.jobs.{ MkDir, FsJob, MapReduceJob, NoOpJob }
 
 object DecisionSamples {
 

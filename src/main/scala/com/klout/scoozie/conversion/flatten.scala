@@ -2,14 +2,9 @@
  * Copyright (C) 2013 Klout Inc. <http://www.klout.com>
  */
 
-package com.klout.scoozie
-package conversion
+package com.klout.scoozie.conversion
 
-import jobs._
-import dsl._
-import workflow._
-import scalaxb._
-import com.google.common.base._
+import com.klout.scoozie.dsl._
 
 case class RefSet[A <: AnyRef](vals: Seq[A]) extends Set[A] {
 
@@ -30,9 +25,10 @@ case class RefSet[A <: AnyRef](vals: Seq[A]) extends Set[A] {
         else
             RefSet(vals :+ elem)
     }
-    def ++(elems: RefSet[A]): RefSet[A] = (this /: elems)(_ + _)
 
-    def --(elems: RefSet[A]): RefSet[A] = (this /: elems)(_ - _)
+    def ++(elems: RefSet[A]): RefSet[A] = (this /: elems) (_ + _)
+
+    def --(elems: RefSet[A]): RefSet[A] = (this /: elems) (_ - _)
 
     def map[B <: AnyRef](f: (A) => B): RefSet[B] = {
         (RefSet[B]() /: vals) ((e1: RefSet[B], e2: A) => e1 + f(e2))
@@ -52,6 +48,7 @@ object RefSet {
     def apply[A <: AnyRef](): RefSet[A] = {
         RefSet(Seq.empty)
     }
+
     def apply[A <: AnyRef](elem: A, elems: A*): RefSet[A] = {
         RefSet(elem +: elems)
     }
@@ -102,7 +99,7 @@ object Flatten {
 
         var accum: RefMap[Dependency, GraphNode] = RefMap[Dependency, GraphNode](Map.empty)
 
-        def flatten0(currentDep: Dependency, after: Set[GraphNode], inDecision: Boolean = false) {
+        def flatten0[A](currentDep: Dependency, after: Set[GraphNode], inDecision: Boolean = false) {
             accum get currentDep match {
                 //check if we've already processed the dependency. If so, just update after to include where we came from
                 case Some(alreadyThere) =>
@@ -119,7 +116,7 @@ object Flatten {
                             val endNode = GraphNode("end", WorkflowEnd)
                             deps foreach (flatten0(_, Set(endNode)))
 
-                        case Node(job: Job, deps) =>
+                        case Node(job: Job[A], deps) =>
                             val newNode = GraphNode(
                                 job.jobName,
                                 WorkflowJob(job),
@@ -177,7 +174,7 @@ object Flatten {
                                         alreadyThere.decisionAfter ++= RefSet(after.toSeq)
                                     case _ =>
                                         currDep match {
-                                            case Node(job: Job, deps) =>
+                                            case Node(job: Job[A], deps) =>
                                                 val newNode = GraphNode(
                                                     job.jobName,
                                                     WorkflowJob(job),
@@ -187,7 +184,7 @@ object Flatten {
                                                 accum += currDep -> newNode
                                                 deps.toList foreach (flatten0(_, Set(newNode), inDecision))
                                             case _ =>
-                                                flatten0(currDep, after, true)
+                                                flatten0(currDep, after, inDecision = true)
                                         }
                                 }
                             })
@@ -199,7 +196,7 @@ object Flatten {
                                     after foreach (_.before += graphNode)
                                 case _ =>
                                     node match {
-                                        case Node(job: Job, deps) =>
+                                        case Node(job: Job[A], deps) =>
                                             val newNode = GraphNode(
                                                 job.jobName,
                                                 WorkflowJob(job)
@@ -267,7 +264,7 @@ object Flatten {
     def getDecisionLeaves(node: GraphNode, endNode: GraphNode): Set[GraphNode] = {
         if (node.after contains endNode)
             Set(node)
-        else (Set[GraphNode]() /: node.after)(_ ++ getDecisionLeaves(_, endNode))
+        else (Set[GraphNode]() /: node.after) (_ ++ getDecisionLeaves(_, endNode))
     }
 
     def isStartNode(node: GraphNode): Boolean = {
@@ -275,15 +272,15 @@ object Flatten {
     }
 
     /*
-     * Will return true only for nodes that must lead to "end"
-     */
+* Will return true only for nodes that must lead to "end"
+*/
     def isEndNode(node: GraphNode): Boolean = {
         (node.after.isEmpty || node.after.exists(_.workflowOption == WorkflowEnd)) && node.decisionAfter.isEmpty
     }
 
     /*
-     * Will return true for all nodes that may lead to "end"
-     */
+* Will return true for all nodes that may lead to "end"
+*/
     def isPotentialEndNode(node: GraphNode): Boolean = {
         val isEnd = (node.after.isEmpty || node.after.exists(_.workflowOption == WorkflowEnd)) &&
             (node.decisionAfter.isEmpty || node.decisionAfter.exists(_.workflowOption == WorkflowEnd))
@@ -294,7 +291,7 @@ object Flatten {
         var accum = RefMap[Dependency, GraphNode](Map.empty)
 
         def makeSuffix(nodes: RefSet[GraphNode]): String = {
-            (nodes.map ((currNode: GraphNode) => currNode.name)).toList.sorted mkString "-"
+            (nodes.map((currNode: GraphNode) => currNode.name)).toList.sorted mkString "-"
         }
 
         for (node <- nodes.values) {
@@ -335,9 +332,9 @@ object Flatten {
     }
 
     /*
-     * returns true if the two strings are the same, 
-     * ignoring the last character of each if it is a digit
-     */
+* returns true if the two strings are the same,
+* ignoring the last character of each if it is a digit
+*/
     def nameNumMatch(name1: String, name2: String): Boolean = {
         val Pattern = """\d""".r
         def nameNumMatch0(n1: String, n2: String): Boolean = {
@@ -361,17 +358,18 @@ object Flatten {
             currNode
         })
     }
+
     /*
-     * returns true if there exist at least 2 nodes in given list w/ same name 
-     * ignoring the last character if it is a digit)
-     */
+* returns true if there exist at least 2 nodes in given list w/ same name
+* ignoring the last character if it is a digit)
+*/
     def hasDuplicates(nodes: List[GraphNode], name: String) = {
         (nodes filter (n => nameNumMatch(n.name, name))).size > 1
     }
 
     /*
-     * Performs verfication on node names, repairing incorrect names
-     */
+* Performs verfication on node names, repairing incorrect names
+*/
     def verifyNames(nodes: List[GraphNode]) = {
         removeDisallowedCharacters(nodes)
         fixDuplicateNames(nodes)
@@ -379,8 +377,8 @@ object Flatten {
     }
 
     /*
-     * - Removes disallowed characters such as "${}"
-     */
+* - Removes disallowed characters such as "${}"
+*/
     def removeDisallowedCharacters(nodes: List[GraphNode]) = {
         val Pattern = """[${}]""".r
         nodes foreach (n => {
@@ -389,9 +387,9 @@ object Flatten {
     }
 
     /*
-     * Oozie nodes must have names of <= 50 characters
-     * Renames nodes with names of > 47 characters
-     */
+* Oozie nodes must have names of <= 50 characters
+* Renames nodes with names of > 47 characters
+*/
     def fixLongNames(nodes: List[GraphNode]): List[GraphNode] = {
         nodes foreach (n => {
             if (n.name.length > 47) {
@@ -402,8 +400,8 @@ object Flatten {
     }
 
     /*
-     * Renames nodes with duplicate names
-     */
+* Renames nodes with duplicate names
+*/
     def fixDuplicateNames(nodes: List[GraphNode]): List[GraphNode] = {
         val refSet = RefSet(nodes)
         val partiallyOrdered = Conversion.order(refSet)

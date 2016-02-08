@@ -2,18 +2,17 @@
  * Copyright (C) 2013 Klout Inc. <http://www.klout.com>
  */
 
-package com.klout.scoozie
-package conversion
+package com.klout.scoozie.conversion
 
-import jobs._
-import dsl._
-import workflow._
-import scalaxb._
+import com.klout.scoozie.dsl._
+import com.klout.scoozie.jobs.MapReduceJob
+import oozie.workflow._
 import org.specs2.mutable._
+
+import scalaxb._
 
 class ConversionSpec extends Specification {
     "Conversion" should {
-
         "give empty result for empty Workflow" in {
             val wf = WORKFLOWu45APP(
                 name = "empty",
@@ -33,8 +32,8 @@ class ConversionSpec extends Specification {
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_start",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("end"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("kill"), KILL(
@@ -53,29 +52,29 @@ class ConversionSpec extends Specification {
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_first",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("mr_second"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_second",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("mr_third"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_third",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("mr_fourth"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_fourth",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("end"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("kill"), KILL(
@@ -94,8 +93,8 @@ class ConversionSpec extends Specification {
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_first",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("fork-mr_secondA-mr_secondB"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("fork"), FORK(
@@ -106,15 +105,15 @@ class ConversionSpec extends Specification {
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_secondA",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("join-mr_secondA-mr_secondB"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_secondB",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("join-mr_secondA-mr_secondB"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("join"), JOIN(
@@ -136,8 +135,8 @@ class ConversionSpec extends Specification {
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_first",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("decision-mr_default-mr_option"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("decision"), DECISION(
@@ -153,22 +152,22 @@ class ConversionSpec extends Specification {
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_default",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("mr_second"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_option",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("mr_second"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_second",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("end"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("kill"), KILL(
@@ -187,43 +186,43 @@ class ConversionSpec extends Specification {
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_begin",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("mr_first"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_first",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("mr_second"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_second",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("mr_third"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_third",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("mr_fourth"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_fourth",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("mr_final"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_final",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("end"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("kill"), KILL(
@@ -242,8 +241,8 @@ class ConversionSpec extends Specification {
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_first",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("fork-mr_secondA-mr_secondB"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("fork"), FORK(
@@ -254,15 +253,15 @@ class ConversionSpec extends Specification {
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_secondA",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("join-mr_secondA-mr_secondB"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_secondB",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("join-mr_secondA-mr_secondB"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("join"), JOIN(
@@ -271,8 +270,8 @@ class ConversionSpec extends Specification {
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_third",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("fork-mr_fourthA-mr_fourthB"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("fork"), FORK(
@@ -283,15 +282,15 @@ class ConversionSpec extends Specification {
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_fourthA",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("join-mr_fourthA-mr_fourthB"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_fourthB",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("join-mr_fourthA-mr_fourthB"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("join"), JOIN(
@@ -313,8 +312,8 @@ class ConversionSpec extends Specification {
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_first",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("fork-mr_secondA-mr_secondB"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("fork"), FORK(
@@ -325,15 +324,15 @@ class ConversionSpec extends Specification {
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_secondA",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("fork-mr_thirdA-mr_thirdB"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_secondB",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("mr_thirdC"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("fork"), FORK(
@@ -344,22 +343,22 @@ class ConversionSpec extends Specification {
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_thirdC",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("join-mr_fourth-mr_thirdC"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_thirdA",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("join-mr_thirdA-mr_thirdB"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_thirdB",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("join-mr_thirdA-mr_thirdB"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("join"), JOIN(
@@ -368,8 +367,8 @@ class ConversionSpec extends Specification {
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_fourth",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("join-mr_fourth-mr_thirdC"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("join"), JOIN(
@@ -391,36 +390,36 @@ class ConversionSpec extends Specification {
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_start",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("mr_first"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_first",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("mr_second"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_second",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("mr_third"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_third",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("mr_fourth"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_fourth",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("fork-mr_thirdA-mr_thirdB"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("fork"), FORK(
@@ -431,15 +430,15 @@ class ConversionSpec extends Specification {
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_thirdA",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("join-mr_thirdA-mr_thirdB"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_thirdB",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("join-mr_thirdA-mr_thirdB"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("join"), JOIN(
@@ -461,8 +460,8 @@ class ConversionSpec extends Specification {
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_first",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("fork-mr_second-mr_second2"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("fork"), FORK(
@@ -473,15 +472,15 @@ class ConversionSpec extends Specification {
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_second",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("join-mr_second-mr_second2"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_second2",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("join-mr_second-mr_second2"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("join"), JOIN(
@@ -503,8 +502,8 @@ class ConversionSpec extends Specification {
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_first",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("decision-mr_second-mr_option"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("decision"), DECISION(
@@ -520,15 +519,15 @@ class ConversionSpec extends Specification {
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_option",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("mr_second"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_second",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("end"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("kill"), KILL(
@@ -547,8 +546,8 @@ class ConversionSpec extends Specification {
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_first",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("decision-mr_default2-decision-mr_default-mr_---"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("decision"), DECISION(
@@ -574,22 +573,22 @@ class ConversionSpec extends Specification {
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_option",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("mr_default"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_default",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("mr_default2"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_default2",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("end"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("kill"), KILL(
@@ -608,22 +607,22 @@ class ConversionSpec extends Specification {
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_first",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("mr_second"),
                         error = ACTION_TRANSITION("mr_errorOption"))),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_errorOption",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("end"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_second",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("end"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("kill"), KILL(
@@ -652,15 +651,15 @@ class ConversionSpec extends Specification {
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_default",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("decision-mr_last-mr_sugarOption"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_option",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("mr_last"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("decision"), DECISION(
@@ -676,15 +675,15 @@ class ConversionSpec extends Specification {
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_sugarOption",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("mr_last"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("action"), ACTION(
                         name = "mr_last",
                         actionoption = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
-                            jobu45tracker = "${jobTracker}",
-                            nameu45node = "${nameNode}")),
+                            jobu45tracker = Some("${jobTracker}"),
+                            nameu45node = Some("${nameNode}"))),
                         ok = ACTION_TRANSITION("end"),
                         error = ACTION_TRANSITION("kill"))),
                     DataRecord(None, Some("kill"), KILL(

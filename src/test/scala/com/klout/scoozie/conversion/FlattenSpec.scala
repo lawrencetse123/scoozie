@@ -2,21 +2,19 @@
  * Copyright (C) 2013 Klout Inc. <http://www.klout.com>
  */
 
-package com.klout.scoozie
-package conversion
+package com.klout.scoozie.conversion
 
-import dsl._
-import jobs._
-import samples._
+import com.klout.scoozie.dsl._
+import com.klout.scoozie.jobs.NoOpJob
 import org.specs2.mutable._
 
 class FlattenSpec extends Specification {
-
     "Flatten" should {
 
         "give empty result for empty Workflow" in {
             Flatten(EmptyWorkflow).values.toSet must beEmpty
         }
+
         "give single node for single node workflow" in {
             val first = GraphNode("start", WorkflowJob(NoOpJob("start")))
             val end = GraphNode("end", WorkflowEnd)
@@ -25,6 +23,7 @@ class FlattenSpec extends Specification {
 
             Flatten(SingleWorkflow).values.toSet must_== Set(first)
         }
+
         "work for simple flow" in {
             val a = GraphNode("first", WorkflowJob(NoOpJob("first")))
             val b = GraphNode("second", WorkflowJob(NoOpJob("second")))
@@ -42,6 +41,7 @@ class FlattenSpec extends Specification {
 
             Flatten(SimpleWorkflow).values.toSet must_== Set(a, b, c, d)
         }
+
         "work for simple fork / join" in {
             val first = GraphNode("first", WorkflowJob(NoOpJob("first")))
             val fork = GraphNode("fork-secondA-secondB", WorkflowFork)
@@ -60,6 +60,7 @@ class FlattenSpec extends Specification {
 
             Flatten(SimpleForkJoin).values.toSet must_== Set(first, fork, a, b, join)
         }
+
         "work for fork / join only" in {
             val fork = GraphNode("fork-startA-startB", WorkflowFork)
             val a = GraphNode("startA", WorkflowJob(NoOpJob("startA")))
@@ -75,6 +76,7 @@ class FlattenSpec extends Specification {
 
             Flatten(ForkJoinOnly).values.toSet must_== Set(fork, a, b, join)
         }
+
         "work for simple sub workflow" in {
             val first = GraphNode("begin", WorkflowJob(NoOpJob("begin")))
             val a = GraphNode("first", WorkflowJob(NoOpJob("first")))

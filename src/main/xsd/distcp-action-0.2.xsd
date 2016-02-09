@@ -17,7 +17,9 @@
   limitations under the License.
 -->
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns:distcp="uri:oozie:distcp-action:0.2" elementFormDefault="qualified"
+           xmlns:distcp="uri:oozie:distcp-action:0.2"
+           xmlns:workflow="uri:oozie:workflow:0.5"
+           elementFormDefault="qualified"
            targetNamespace="uri:oozie:distcp-action:0.2">
 
     <xs:element name="distcp" type="distcp:ACTION"/>
@@ -27,40 +29,11 @@
         <xs:sequence>
                 <xs:element name="job-tracker" type="xs:string" minOccurs="0" maxOccurs="1"/>
                 <xs:element name="name-node" type="xs:string" minOccurs="0" maxOccurs="1"/>
-                <xs:element name="prepare" type="distcp:PREPARE" minOccurs="0" maxOccurs="1"/>
-                <xs:element name="configuration" type="distcp:CONFIGURATION" minOccurs="0" maxOccurs="1"/>
+                <xs:element name="prepare" type="workflow:PREPARE" minOccurs="0" maxOccurs="1"/>
+                <xs:element name="configuration" type="workflow:CONFIGURATION" minOccurs="0" maxOccurs="1"/>
                 <xs:element name="java-opts" type="xs:string" minOccurs="0" maxOccurs="1"/>
                 <xs:element name="arg" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
     </xs:complexType>
-    
-    <xs:complexType name="CONFIGURATION">
-        <xs:sequence>
-            <xs:element name="property" minOccurs="1" maxOccurs="unbounded">
-                <xs:complexType>
-                    <xs:sequence>
-                        <xs:element name="name" minOccurs="1" maxOccurs="1" type="xs:string"/>
-                        <xs:element name="value" minOccurs="1" maxOccurs="1" type="xs:string"/>
-                        <xs:element name="description" minOccurs="0" maxOccurs="1" type="xs:string"/>
-                    </xs:sequence>
-                </xs:complexType>
-            </xs:element>
-        </xs:sequence>
-    </xs:complexType>
-    
-    <xs:complexType name="PREPARE">
-        <xs:sequence>
-            <xs:element name="delete" type="distcp:DELETE" minOccurs="0" maxOccurs="unbounded"/>
-            <xs:element name="mkdir" type="distcp:MKDIR" minOccurs="0" maxOccurs="unbounded"/>
-        </xs:sequence>
-    </xs:complexType>
 
-    <xs:complexType name="DELETE">
-        <xs:attribute name="path" type="xs:string" use="required"/>
-    </xs:complexType>
-
-    <xs:complexType name="MKDIR">
-        <xs:attribute name="path" type="xs:string" use="required"/>
-    </xs:complexType>
-    
 </xs:schema>

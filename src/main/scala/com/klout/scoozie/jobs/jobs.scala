@@ -47,10 +47,10 @@ case class HiveJob(fileName: String,
             case Some(xml) => xml
             case _         => Seq[String]()
         },
-        configuration = JobUtils.getHiveConfiguration(configuration),
+        configuration = JobUtils.getConfiguration(configuration),
         actionoption = DataRecord(fileName), //this is probably the incorrect parameter
         param = parameters.toSeq,
-        prepare = JobUtils.getHivePrepare(prepare),
+        prepare = JobUtils.getPrepare(prepare),
         file = otherFiles.getOrElse(Nil),
         xmlns = "uri:oozie:hive-action:0.5"
     ))
@@ -138,32 +138,9 @@ object JobUtils {
             None
     }
 
-    def getHivePrepare(prep: List[FsTask]) = {
-        import oozie.workflow.hive._
-        val deletes: Seq[DELETE] = prep flatMap {
-            case Rm(path) => Some(DELETE(path))
-            case _        => None
-        }
-        val mkdirs: Seq[MKDIR] = prep flatMap {
-            case MkDir(path) => Some(MKDIR(path))
-            case _           => None
-        }
-        if (!(deletes.isEmpty && mkdirs.isEmpty))
-            Some(PREPARE(deletes, mkdirs))
-        else
-            None
-    }
-
     def getConfiguration(config: ArgList) = {
         if (config.nonEmpty)
             Some(oozie.workflow.CONFIGURATION(config map (tuple => Property2(tuple._1, tuple._2))))
-        else
-            None
-    }
-
-    def getHiveConfiguration(config: ArgList) = {
-        if (config.nonEmpty)
-            Some(oozie.workflow.hive.CONFIGURATION(config map (tuple => oozie.workflow.hive.Property(tuple._1, tuple._2))))
         else
             None
     }

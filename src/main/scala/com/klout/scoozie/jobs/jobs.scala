@@ -7,6 +7,7 @@ package com.klout.scoozie.jobs
 import com.klout.scoozie.dsl.Job
 import oozie.workflow._
 import oozie.workflow.hive.{ ACTION => HIVEACTION }
+import oozie._
 
 import scalaxb.DataRecord
 

@@ -55,7 +55,7 @@ scalaxbSettings
 
 sourceGenerators in Compile <+= scalaxb in Compile
 
-protocolPackageName in scalaxb in Compile := Some("oozie.workflow")
+protocolPackageName in scalaxb in Compile := Some("oozie")
 
 packageName in scalaxb in Compile := "oozie"
 

@@ -6,6 +6,7 @@ package com.klout.scoozie.conversion
 
 import com.klout.scoozie.dsl._
 import com.klout.scoozie.jobs.MapReduceJob
+import com.klout.scoozie.workflow.WorkflowImpl
 import oozie.workflow._
 import org.specs2.mutable._
 
@@ -698,13 +699,13 @@ class ConversionSpec extends Specification {
 
     def EmptyWorkflow = {
         val end = End dependsOn Nil
-        Workflow("empty", end)
+        WorkflowImpl("empty", end)
     }
 
     def SingleWorkflow = {
         val start = MapReduceJob("start") dependsOn Start
         val end = End dependsOn start
-        Workflow("single", end)
+        WorkflowImpl("single", end)
     }
 
     def SimpleWorkflow = {
@@ -713,7 +714,7 @@ class ConversionSpec extends Specification {
         val third = MapReduceJob("third") dependsOn second
         val fourth = MapReduceJob("fourth") dependsOn third
         val end = End dependsOn fourth
-        Workflow("simple", end)
+        WorkflowImpl("simple", end)
     }
 
     def SimpleForkJoin = {
@@ -721,7 +722,7 @@ class ConversionSpec extends Specification {
         val secondA = MapReduceJob("secondA") dependsOn first
         val secondB = MapReduceJob("secondB") dependsOn first
         val end = End dependsOn (secondA, secondB)
-        Workflow("simple-fork-join", end)
+        WorkflowImpl("simple-fork-join", end)
     }
 
     def SimpleDecision = {
@@ -731,7 +732,7 @@ class ConversionSpec extends Specification {
         val option = MapReduceJob("option") dependsOn (decision option "route1")
         val second = MapReduceJob("second") dependsOn OneOf(default, option)
         val done = End dependsOn second
-        Workflow("simple-decision", done)
+        WorkflowImpl("simple-decision", done)
     }
 
     def SimpleSubWorkflow = {
@@ -739,7 +740,7 @@ class ConversionSpec extends Specification {
         val subWf = SimpleWorkflow dependsOn first
         val third = MapReduceJob("final") dependsOn subWf
         val end = End dependsOn third
-        Workflow("simple-sub-workflow", end)
+        WorkflowImpl("simple-sub-workflow", end)
     }
 
     def TwoSimpleForkJoins = {
@@ -750,7 +751,7 @@ class ConversionSpec extends Specification {
         val fourthA = MapReduceJob("fourthA") dependsOn third
         val fourthB = MapReduceJob("fourthB") dependsOn third
         val end = End dependsOn (fourthA, fourthB)
-        Workflow("two-simple-fork-joins", end)
+        WorkflowImpl("two-simple-fork-joins", end)
     }
 
     def NestedForkJoin = {
@@ -762,7 +763,7 @@ class ConversionSpec extends Specification {
         val thirdC = MapReduceJob("thirdC") dependsOn secondB
         val fourth = MapReduceJob("fourth") dependsOn (thirdA, thirdB)
         val end = End dependsOn (fourth, thirdC)
-        Workflow("nested-fork-join", end)
+        WorkflowImpl("nested-fork-join", end)
     }
 
     def SubworkflowWithForkJoins = {
@@ -771,7 +772,7 @@ class ConversionSpec extends Specification {
         val thirdA = MapReduceJob("thirdA") dependsOn sub
         val thirdB = MapReduceJob("thirdB") dependsOn sub
         val end = End dependsOn (thirdA, thirdB)
-        Workflow("sub-fork-join", end)
+        WorkflowImpl("sub-fork-join", end)
     }
 
     def DuplicateNodes = {
@@ -779,7 +780,7 @@ class ConversionSpec extends Specification {
         val second = MapReduceJob("second") dependsOn first
         val third = MapReduceJob("second") dependsOn first
         val end = End dependsOn (second, third)
-        Workflow("duplicate-nodes", end)
+        WorkflowImpl("duplicate-nodes", end)
     }
 
     def SugarOption = {
@@ -787,7 +788,7 @@ class ConversionSpec extends Specification {
         val option = MapReduceJob("option") dependsOn first doIf "${doOption}"
         val second = MapReduceJob("second") dependsOn Optional(option)
         val done = End dependsOn second
-        Workflow("sugar-option-decision", done)
+        WorkflowImpl("sugar-option-decision", done)
     }
 
     def DecisionAndSugarOption = {
@@ -799,7 +800,7 @@ class ConversionSpec extends Specification {
         val default = MapReduceJob("default") dependsOn Optional(option)
         val default2 = MapReduceJob("default2") dependsOn OneOf(decision default, default)
         val end = End dependsOn default2
-        Workflow("mixed-decision-styles", end)
+        WorkflowImpl("mixed-decision-styles", end)
     }
 
     def CustomErrorTo = {
@@ -807,7 +808,7 @@ class ConversionSpec extends Specification {
         val errorOption = MapReduceJob("errorOption") dependsOn (first error)
         val second = MapReduceJob("second") dependsOn first
         val end = End dependsOn OneOf(second, errorOption)
-        Workflow("custom-errorTo", end)
+        WorkflowImpl("custom-errorTo", end)
     }
 
     def SubWfEndWithSugarOption = {
@@ -815,7 +816,7 @@ class ConversionSpec extends Specification {
         val wf = WfEndWithSugarOption dependsOn Start
         val last = MapReduceJob("last") dependsOn wf
         val end = End dependsOn last
-        Workflow("sub-wf-ending-with-sugar-option", end)
+        WorkflowImpl("sub-wf-ending-with-sugar-option", end)
     }
 
     def WfEndWithSugarOption = {
@@ -827,7 +828,7 @@ class ConversionSpec extends Specification {
         val default = MapReduceJob("default") dependsOn (decision default)
         val sugarOption = MapReduceJob("sugarOption") dependsOn default doIf "doSugarOption"
         val end = End dependsOn OneOf(option, Optional(sugarOption))
-        Workflow("test-agg-content", end)
+        WorkflowImpl("test-agg-content", end)
     }
 
 }

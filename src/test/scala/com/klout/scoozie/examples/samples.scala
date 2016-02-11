@@ -6,6 +6,7 @@ package com.klout.scoozie.examples
 
 import com.klout.scoozie.dsl._
 import com.klout.scoozie.jobs.{ MkDir, FsJob, MapReduceJob, NoOpJob }
+import com.klout.scoozie.workflow.WorkflowImpl
 
 object DecisionSamples {
 
@@ -19,7 +20,7 @@ object DecisionSamples {
     val Route2 = MapReduceJob("processBing") dependsOn (SomeDecision option "ifBing")
     val Done = End dependsOn OneOf(Route1, Route2)
 
-    val Pipeline = Workflow("decisions", Done)
+    val Pipeline = WorkflowImpl("decisions", Done)
 
     def newDecisionSample = {
         val first = NoOpJob("first") dependsOn Start
@@ -29,24 +30,24 @@ object DecisionSamples {
             val sub1 = NoOpJob("sub1") dependsOn Start
             val sub2 = NoOpJob("sub2") dependsOn sub1
             val sub3 = NoOpJob("sub3") dependsOn sub2
-            Workflow("sub-wf", sub3)
+            WorkflowImpl("sub-wf", sub3)
         } dependsOn alwaysDo doIf "{doSubWf}"
         val alwaysDo2 = NoOpJob("always do 2") dependsOn Optional(optionalNode2)
         val end = End dependsOn alwaysDo2
-        Workflow("new-decision", end)
+        WorkflowImpl("new-decision", end)
     }
 }
 
 object SimpleSamples {
     def EmptyWorkflow = {
         val end = End dependsOn Nil
-        Workflow("empty", end)
+        WorkflowImpl("empty", end)
     }
 
     def SingleWorkflow = {
         val start = MapReduceJob("start") dependsOn Start
         val end = End dependsOn start
-        Workflow("single", end)
+        WorkflowImpl("single", end)
     }
 
     def HelloWorldWorkflow = {
@@ -55,7 +56,7 @@ object SimpleSamples {
             tasks = List(MkDir("${nameNode}/users/test/mj/oozie-fun/hello-world_${wf:id()}"))
         ) dependsOn Start
         val done = End dependsOn mkHelloWorld
-        Workflow("hello-world-wf", done)
+        WorkflowImpl("hello-world-wf", done)
     }
 
     def SimpleWorkflow = {
@@ -64,7 +65,7 @@ object SimpleSamples {
         val third = MapReduceJob("third") dependsOn second
         val fourth = MapReduceJob("fourth") dependsOn third
         val end = End dependsOn fourth
-        Workflow("simple", end)
+        WorkflowImpl("simple", end)
     }
 
     def SimpleForkJoin = {
@@ -72,7 +73,7 @@ object SimpleSamples {
         val secondA = MapReduceJob("secondA") dependsOn first
         val secondB = MapReduceJob("secondB") dependsOn first
         val end = End dependsOn (secondA, secondB)
-        Workflow("simple-fork-join", end)
+        WorkflowImpl("simple-fork-join", end)
     }
 
     def SimpleDecision = {
@@ -82,7 +83,7 @@ object SimpleSamples {
         val option = MapReduceJob("option") dependsOn (decision option "route1")
         val second = MapReduceJob("second") dependsOn OneOf(default, option)
         val done = End dependsOn second
-        Workflow("simple-decision", done)
+        WorkflowImpl("simple-decision", done)
     }
 
     def SimpleSubWorkflow = {
@@ -90,7 +91,7 @@ object SimpleSamples {
         val subWf = SimpleWorkflow dependsOn first
         val third = MapReduceJob("final") dependsOn subWf
         val end = End dependsOn third
-        Workflow("simple-sub-workflow", end)
+        WorkflowImpl("simple-sub-workflow", end)
     }
 
     def TwoSimpleForkJoins = {
@@ -101,7 +102,7 @@ object SimpleSamples {
         val fourthA = MapReduceJob("fourthA") dependsOn third
         val fourthB = MapReduceJob("fourthB") dependsOn third
         val end = End dependsOn (fourthA, fourthB)
-        Workflow("two-simple-fork-joins", end)
+        WorkflowImpl("two-simple-fork-joins", end)
     }
 
     /* Not allowed by Oozie */
@@ -113,7 +114,7 @@ object SimpleSamples {
         val thirdB = MapReduceJob("thirdB") dependsOn secondA
         val thirdC = MapReduceJob("thirdC") dependsOn secondB
         val fourth = MapReduceJob("fourth") dependsOn (thirdA, thirdB, thirdC)
-        Workflow("nested-fork-join", fourth)
+        WorkflowImpl("nested-fork-join", fourth)
     }
 
     /* Not allowed by Oozie */
@@ -151,7 +152,7 @@ object SimpleSamples {
                 MkDir(s"$root/firstDir/secondDirB/thirdDirC/fourthDir"))
         ) dependsOn (thirdA, thirdB, thirdC)
         val end = End dependsOn fourth
-        Workflow("test-nested-fork-join", end)
+        WorkflowImpl("test-nested-fork-join", end)
     }
 
     /* Allowed by Oozie */
@@ -195,7 +196,7 @@ object SimpleSamples {
                 MkDir(s"$root/firstDir/secondDirB/fifthDir"))
         ) dependsOn (fourth, secondB)
         val end = End dependsOn last
-        Workflow("test-nested-fork-join-2", end)
+        WorkflowImpl("test-nested-fork-join-2", end)
     }
 
     /* Not allowed by Oozie */
@@ -234,7 +235,7 @@ object SimpleSamples {
         ) dependsOn secondB
         //join
         val end = End dependsOn (thirdA, thirdB, thirdC, thirdD)
-        Workflow("test-nested-fork-join-3", end)
+        WorkflowImpl("test-nested-fork-join-3", end)
     }
 
     /* Not allowed by Oozie */
@@ -271,7 +272,7 @@ object SimpleSamples {
         ) dependsOn (thirdB, secondB)
         //join-thirdA-fourth
         val end = End dependsOn (thirdA, fourth)
-        Workflow("test-nested-fork-join-4", end)
+        WorkflowImpl("test-nested-fork-join-4", end)
     }
 
     def SubworkflowWithForkJoins = {
@@ -280,7 +281,7 @@ object SimpleSamples {
         val thirdA = MapReduceJob("thirdA") dependsOn sub
         val thirdB = MapReduceJob("thirdB") dependsOn sub
         val end = End dependsOn (thirdA, thirdB)
-        Workflow("sub-fork-join", end)
+        WorkflowImpl("sub-fork-join", end)
     }
 
     val TestSubWorkflow = {
@@ -290,7 +291,7 @@ object SimpleSamples {
         val sub2 = SimpleWorkflow dependsOn middle
         val last = MapReduceJob("last") dependsOn sub2
         val end = End dependsOn last
-        Workflow("test-sub-wf", end)
+        WorkflowImpl("test-sub-wf", end)
     }
 
     val DuplicateSubWorkflows = {
@@ -299,7 +300,7 @@ object SimpleSamples {
         val middle = MapReduceJob("middle") dependsOn sub1
         val sub2 = SimpleWorkflow dependsOn middle
         val end = End dependsOn sub2
-        Workflow("duplicate-sub-workflows", end)
+        WorkflowImpl("duplicate-sub-workflows", end)
     }
 
     def CustomErrorTo = {
@@ -314,7 +315,7 @@ object SimpleSamples {
         val option = MapReduceJob("option") dependsOn first doIf "doOption"
         val second = MapReduceJob("second") dependsOn Optional(option)
         val done = End dependsOn second
-        Workflow("sugar-option-decision", done)
+        WorkflowImpl("sugar-option-decision", done)
     }
 
     def SubWfExample = {
@@ -322,7 +323,7 @@ object SimpleSamples {
         val someWork = MapReduceJob("someWork") dependsOn begin
         val subwf = SugarOption dependsOn someWork
         val end = End dependsOn subwf
-        Workflow("sub-wf-example", end)
+        WorkflowImpl("sub-wf-example", end)
     }
 
     def DecisionExample = {
@@ -336,6 +337,6 @@ object SimpleSamples {
         val route2End = MapReduceJob("r2End") dependsOn route2Start
         val last = MapReduceJob("last") dependsOn OneOf(route1End, route2End)
         val done = End dependsOn last
-        Workflow("decision-example", done)
+        WorkflowImpl("decision-example", done)
     }
 }

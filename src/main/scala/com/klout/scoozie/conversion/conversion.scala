@@ -5,10 +5,10 @@
 package com.klout.scoozie.conversion
 
 import com.google.common.base._
-import com.klout.scoozie.dsl.{ Workflow, Job, DecisionNode, Predicate, Predicates }
+import com.klout.scoozie.dsl.Predicate
+import com.klout.scoozie.dsl.Predicates
+import com.klout.scoozie.dsl._
 import com.klout.scoozie.verification.Verification
-import oozie.workflow._
-
 import scalaxb._
 
 case class PartiallyOrderedNode(node: GraphNode,
@@ -93,7 +93,7 @@ case class GraphNode(var name: String,
         nameRoutes("default" :: predicateRoutes)
     }
 
-    lazy val toXmlWorkflowOption: Set[DataRecord[WORKFLOWu45APPOption]] = {
+    def toXmlWorkflowOption[ActionOption](actionBuilder: ActionBuilder[ActionOption]): Set[DataRecord[ActionOption]] = {
         if (after.size > 1) {
             workflowOption match {
                 //after will be of size > 1 for forks
@@ -102,40 +102,36 @@ case class GraphNode(var name: String,
                     throw new RuntimeException("error: nodes should only be singly linked " + afterNames)
             }
         }
+
         val okTransition = afterNames.headOption.getOrElse(
             decisionAfterNames.headOption.getOrElse("end"))
-        workflowOption match {
-            case WorkflowFork =>
-                Set(DataRecord(None, Some("fork"), FORK(
-                    path = (afterNames.toSeq map FORK_TRANSITION.apply).toList,
-                    name = name)))
-            case WorkflowJoin =>
-                Set(DataRecord(None, Some("join"), JOIN(
-                    name = name,
-                    to = okTransition)))
-            case WorkflowJob(job) =>
-                Set(DataRecord(None, Some("action"), ACTION(
-                    name = name,
-                    actionoption = job.record,
-                    ok = ACTION_TRANSITION(okTransition),
-                    error = ACTION_TRANSITION(errorTo match {
-                        case Some(node) => node.name
-                        case _          => "kill"
-                    }))))
+
+        type Route = String
+        type Predicate = String
+
+        val result: DataRecord[ActionOption] = workflowOption match {
+            case WorkflowFork => actionBuilder.buildFork(name, afterNames.toList)
+            case WorkflowJoin => actionBuilder.buildJoin(name, okTransition)
+            case WorkflowJob(job: Job[ActionOption]) =>
+                val errorTransition = errorTo match {
+                    case Some(node) => node.name
+                    case _          => "kill"
+                }
+
+                actionBuilder.buildAction(name, job, okTransition, errorTransition)
             case WorkflowDecision(predicates, _) =>
                 val defaultName = getDecisionRouteName("default")
-                val caseSeq = predicates map (pred => {
-                    val route = getDecisionRouteName(pred._1)
-                    CASE(Conversion convertPredicate pred._2, route)
-                })
-                Set(DataRecord(None, Some("decision"), DECISION(
-                    name = name,
-                    switch = SWITCH(
-                        switchsequence1 = SWITCHSequence1(
-                            caseValue = caseSeq,
-                            default = DEFAULT(defaultName))))))
+
+                val cases: List[(Predicate, Route)] = predicates.map {
+                    case (predicateName, predicate) =>
+                        (Conversion convertPredicate predicate, getDecisionRouteName(predicateName))
+                }
+
+                actionBuilder.buildDecision(name, defaultName, cases)
             case _ => ???
         }
+
+        Set(result)
     }
 }
 
@@ -157,26 +153,19 @@ case object WorkflowJoin extends WorkflowOption
 case object WorkflowEnd extends WorkflowOption
 
 object Conversion {
-    val JobTracker = "${jobTracker}"
-    val NameNode = "${nameNode}"
-
-    def apply(workflow: Workflow): WORKFLOWu45APP = {
+    def apply[T, K](workflow: Workflow[T, K]) = {
         val flattenedNodes = Flatten(workflow).values.toSet
         val finalGraph = Verification.verify(flattenedNodes)
         val orderedNodes = order(RefSet(finalGraph.toSeq)).toList sortWith PartiallyOrderedNode.lt map (_.node)
-        val workflowOptions = orderedNodes flatMap (_.toXmlWorkflowOption)
+        val workflowOptions = orderedNodes flatMap (_.toXmlWorkflowOption(workflow.actionBuilder))
         val startTo: String = orderedNodes.headOption match {
             case Some(node) => node.name
             case _          => "end"
         }
 
-        WORKFLOWu45APP(
-            name = workflow.name,
-            workflowu45appoption = workflowOptions.toList :+ DataRecord(None, Some("kill"), KILL(
-                message = workflow.name + " failed, error message[${wf:errorMessage(wf:lastErrorNode())}]",
-                name = "kill")),
-            start = START(startTo),
-            end = END("end"))
+        val actions = workflowOptions :+ workflow.actionBuilder.buildKill(workflow.name)
+
+        workflow.buildWorkflow(startTo, "end", actions)
     }
 
     def convertPredicate(pred: Predicate): String = {

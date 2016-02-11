@@ -14,9 +14,9 @@ import scalaxb.CanWriteXML
 import scalaxb.`package`._
 
 object Scoozie {
-    def apply(workflow: Workflow, postProcessing: Option[XmlPostProcessing]): String = {
+    def apply[T, K](workflow: Workflow[T, K], postProcessing: Option[XmlPostProcessing])(implicit format: CanWriteXML[T]): String = {
         val wf = Conversion(workflow)
-        generateXml(wf, "uri:oozie:workflow:0.5", "workflow", "workflow-app", postProcessing)
+        generateXml(wf, workflow.scope, workflow.namespace, workflow.elementLabel, postProcessing)
     }
 
     def apply(coordinator: COORDINATORu45APP, postProcessing: Option[XmlPostProcessing]): String =
@@ -26,7 +26,7 @@ object Scoozie {
         generateXml(bundle, "uri:oozie:bundle:0.2", "bundle", "bundle-app", postProcessing)
     }
 
-    def apply(workflow: Workflow): String = {
+    def apply[T, K](workflow: Workflow[T, K])(implicit format: CanWriteXML[T]): String = {
         apply(workflow, Some(XmlPostProcessing.Default))
     }
 

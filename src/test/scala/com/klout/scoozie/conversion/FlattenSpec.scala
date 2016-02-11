@@ -6,6 +6,7 @@ package com.klout.scoozie.conversion
 
 import com.klout.scoozie.dsl._
 import com.klout.scoozie.jobs.NoOpJob
+import com.klout.scoozie.workflow.WorkflowImpl
 import org.specs2.mutable._
 
 class FlattenSpec extends Specification {
@@ -209,7 +210,7 @@ class FlattenSpec extends Specification {
                 val option = NoOpJob("option") dependsOn (decision option "route1")
                 val second = NoOpJob("second") dependsOn OneOf(default, option)
                 val done = End dependsOn second
-                Workflow("simple-decision", done) -> decision
+                WorkflowImpl("simple-decision", done) -> decision
             }
 
             val first = GraphNode("first", WorkflowJob(NoOpJob("first")))
@@ -239,7 +240,7 @@ class FlattenSpec extends Specification {
                     "foo" -> Predicates.BooleanProperty("bar")
                 ) dependsOn rando
                 val end = End dependsOn OneOf(first default, first option "foo")
-                Workflow("complex-decisions", end) -> first
+                WorkflowImpl("complex-decisions", end) -> first
             }
 
             val rando = GraphNode("rando", WorkflowJob(NoOpJob("rando")))
@@ -260,7 +261,7 @@ class FlattenSpec extends Specification {
                 ) dependsOn Start
                 val foo = NoOpJob("foo") dependsOn OneOf(first default, first option "foo")
                 val end = End dependsOn foo
-                Workflow("complex-decisions", end) -> first
+                WorkflowImpl("complex-decisions", end) -> first
             }
 
             val first = GraphNode("decision-foo-foo", WorkflowDecision(List("foo" -> Predicates.BooleanProperty("bar")), dec))
@@ -287,7 +288,7 @@ class FlattenSpec extends Specification {
                 val option = NoOpJob("option") dependsOn (decision option "route1")
                 val second = NoOpJob("second") dependsOn OneOf(defaultRoute, option)
                 val done = End dependsOn second
-                Workflow("more-complex-decision", done) -> decision
+                WorkflowImpl("more-complex-decision", done) -> decision
             }
 
             val first = GraphNode("first", WorkflowJob(NoOpJob("first")))
@@ -327,7 +328,7 @@ class FlattenSpec extends Specification {
                 val job3 = NoOpJob("job3") dependsOn (dec option "route1")
                 val fourth = NoOpJob("fourth") dependsOn OneOf(job, job2, job3)
                 val end = End dependsOn fourth
-                Workflow("test", end) -> dec -> dec2
+                WorkflowImpl("test", end) -> dec -> dec2
             }
 
             val first = GraphNode("first", WorkflowJob(NoOpJob("first")))
@@ -419,7 +420,7 @@ class FlattenSpec extends Specification {
                 val option = NoOpJob("option") dependsOn first doIf "doOption"
                 val second = NoOpJob("second") dependsOn Optional(option)
                 val done = End dependsOn second
-                Workflow("sugar-option-decision", done) -> option.dependency.parent
+                WorkflowImpl("sugar-option-decision", done) -> option.dependency.parent
             }
 
             val first = GraphNode("first", WorkflowJob(NoOpJob("first")))
@@ -447,7 +448,7 @@ class FlattenSpec extends Specification {
                 val sub3 = NoOpJob("sub3") dependsOn sub2
                 val second = NoOpJob("second") dependsOn Optional(sub3)
                 val end = End dependsOn second
-                Workflow("more-complex-sugar-decision", end) -> sub1.dependency.parent
+                WorkflowImpl("more-complex-sugar-decision", end) -> sub1.dependency.parent
             }
 
             val first = GraphNode("first", WorkflowJob(NoOpJob("first")))
@@ -484,7 +485,7 @@ class FlattenSpec extends Specification {
                 val default = NoOpJob("default") dependsOn Optional(option)
                 val default2 = NoOpJob("default2") dependsOn OneOf(decision default, default)
                 val end = End dependsOn default2
-                Workflow("mixed-decision-styles", end) -> decision -> option.dependency.parent
+                WorkflowImpl("mixed-decision-styles", end) -> decision -> option.dependency.parent
             }
 
             val first = GraphNode("first", WorkflowJob(NoOpJob("first")))
@@ -533,7 +534,7 @@ class FlattenSpec extends Specification {
                 val optionalWf = SingleWorkflow dependsOn option
                 val default = NoOpJob("default") dependsOn Optional(optionalWf)
                 val end = End dependsOn default
-                Workflow("sugar-option-with-sub-wf", end) -> option.dependency.parent
+                WorkflowImpl("sugar-option-with-sub-wf", end) -> option.dependency.parent
             }
 
             val first = GraphNode("first", WorkflowJob(NoOpJob("first")))
@@ -561,7 +562,7 @@ class FlattenSpec extends Specification {
                 val option = NoOpJob("option") dependsOn Start doIf "doOption"
                 val default = NoOpJob("default") dependsOn Optional(option)
                 val end = End dependsOn default
-                Workflow("sugar-option-from-start", end) -> option.dependency.parent
+                WorkflowImpl("sugar-option-from-start", end) -> option.dependency.parent
             }
             val decision = GraphNode("decision-default-option", WorkflowDecision(List("${doOption}" -> Predicates.BooleanProperty("${doOption}")), dec))
             val option = GraphNode("option", WorkflowJob(NoOpJob("option")), RefSet(), RefSet(), RefSet(), RefSet(), Set("${doOption}" -> dec))
@@ -586,13 +587,13 @@ class FlattenSpec extends Specification {
                 val option = NoOpJob("option") dependsOn (decision option "option")
                 val default = NoOpJob("default") dependsOn (decision default)
                 val end = End dependsOn OneOf(option, default)
-                Workflow("wf-with-mult-end-nodes", end) -> decision
+                WorkflowImpl("wf-with-mult-end-nodes", end) -> decision
             }
             val SubWfWithTwoEndNodes = {
                 val wf = wfWithTwoEndNodes dependsOn Start
                 val last = NoOpJob("last") dependsOn wf
                 val end = End dependsOn last
-                Workflow("nested-wf-with-mult-end-nodes", end)
+                WorkflowImpl("nested-wf-with-mult-end-nodes", end)
             }
 
             val decision = GraphNode("decision-default-option", WorkflowDecision(List("option" -> Predicates.BooleanProperty("${doOption}")), dec))
@@ -624,13 +625,13 @@ class FlattenSpec extends Specification {
 
     def EmptyWorkflow = {
         val end = End dependsOn Nil
-        Workflow("empty", end)
+        WorkflowImpl("empty", end)
     }
 
     def SingleWorkflow = {
         val start = NoOpJob("start") dependsOn Start
         val end = End dependsOn start
-        Workflow("single", end)
+        WorkflowImpl("single", end)
     }
 
     def SimpleWorkflow = {
@@ -639,7 +640,7 @@ class FlattenSpec extends Specification {
         val third = NoOpJob("third") dependsOn second
         val fourth = NoOpJob("fourth") dependsOn third
         val end = End dependsOn fourth
-        Workflow("simple", end)
+        WorkflowImpl("simple", end)
     }
 
     def SimpleForkJoin = {
@@ -647,7 +648,7 @@ class FlattenSpec extends Specification {
         val secondA = NoOpJob("secondA") dependsOn first
         val secondB = NoOpJob("secondB") dependsOn first
         val end = End dependsOn (secondA, secondB)
-        Workflow("simple-fork-join", end)
+        WorkflowImpl("simple-fork-join", end)
     }
 
     def SimpleSubWorkflow = {
@@ -655,7 +656,7 @@ class FlattenSpec extends Specification {
         val subWf = SimpleWorkflow dependsOn first
         val third = NoOpJob("final") dependsOn subWf
         val end = End dependsOn third
-        Workflow("simple-sub-workflow", end)
+        WorkflowImpl("simple-sub-workflow", end)
     }
 
     def TwoSimpleForkJoins = {
@@ -666,7 +667,7 @@ class FlattenSpec extends Specification {
         val fourthA = NoOpJob("fourthA") dependsOn third
         val fourthB = NoOpJob("fourthB") dependsOn third
         val end = End dependsOn (fourthA, fourthB)
-        Workflow("two-simple-fork-joins", end)
+        WorkflowImpl("two-simple-fork-joins", end)
     }
 
     def SubworkflowWithForkJoins = {
@@ -675,7 +676,7 @@ class FlattenSpec extends Specification {
         val thirdA = NoOpJob("thirdA") dependsOn sub
         val thirdB = NoOpJob("thirdB") dependsOn sub
         val end = End dependsOn (thirdA, thirdB)
-        Workflow("sub-fork-join", end)
+        WorkflowImpl("sub-fork-join", end)
     }
 
     def NestedForkJoin = {
@@ -686,14 +687,14 @@ class FlattenSpec extends Specification {
         val thirdB = NoOpJob("thirdB") dependsOn secondA
         val thirdC = NoOpJob("thirdC") dependsOn secondB
         val fourth = NoOpJob("fourth") dependsOn (thirdA, thirdB, thirdC)
-        Workflow("nested-fork-join", fourth)
+        WorkflowImpl("nested-fork-join", fourth)
     }
 
     def ForkJoinOnly = {
         val startA = NoOpJob("startA") dependsOn Start
         val startB = NoOpJob("startB") dependsOn Start
         val end = End dependsOn (startA, startB)
-        Workflow("fork-join-only", end)
+        WorkflowImpl("fork-join-only", end)
     }
 
     def DuplicateNodes = {
@@ -701,7 +702,7 @@ class FlattenSpec extends Specification {
         val second = NoOpJob("second") dependsOn first
         val third = NoOpJob("second") dependsOn first
         val end = End dependsOn (second, third)
-        Workflow("duplicate-nodes", end)
+        WorkflowImpl("duplicate-nodes", end)
     }
 
     def DuplicateSubWorkflows = {
@@ -710,7 +711,7 @@ class FlattenSpec extends Specification {
         val middle = NoOpJob("middle") dependsOn sub1
         val sub2 = SimpleWorkflow dependsOn middle
         val end = End dependsOn sub2
-        Workflow("duplicate-sub-workflows", end)
+        WorkflowImpl("duplicate-sub-workflows", end)
     }
 
     def CustomErrorTo = {
@@ -718,12 +719,12 @@ class FlattenSpec extends Specification {
         val errorOption = NoOpJob("errorOption") dependsOn (first error)
         val second = NoOpJob("second") dependsOn first
         val end = End dependsOn OneOf(second, errorOption)
-        Workflow("custom-errorTo", end)
+        WorkflowImpl("custom-errorTo", end)
     }
 
     def DisallowedNames = {
         val first = NoOpJob("${first}") dependsOn Start
         val end = End dependsOn first
-        Workflow("disallowed-names", end)
+        WorkflowImpl("disallowed-names", end)
     }
 }

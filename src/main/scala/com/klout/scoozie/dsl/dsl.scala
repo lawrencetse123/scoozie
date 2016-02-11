@@ -3,7 +3,6 @@
  */
 
 package com.klout.scoozie.dsl
-
 import scalaxb._
 
 sealed trait Work {
@@ -16,12 +15,35 @@ sealed trait Work {
 
 case object End extends Work
 
-trait Job[A] extends Work {
+trait Job[T] extends Work {
     val jobName: String
-    val record: DataRecord[A]
+    val record: DataRecord[T]
 }
 
-case class Workflow(name: String, end: Node) extends Work
+trait Workflow[T, ActionOption] extends Work {
+    val name: String
+    val end: Node
+    val scope: String
+    val namespace: String
+    val elementLabel: String
+    val actionBuilder: ActionBuilder[ActionOption]
+    def buildWorkflow(start: String, end: String, actions: Seq[DataRecord[ActionOption]]): T
+}
+
+trait ActionBuilder[ActionOption] {
+    type Predicate = String
+    type Route = String
+
+    def buildAction(name: String,
+                    actionOption: Job[ActionOption],
+                    okTo: String,
+                    errorTo: String): DataRecord[ActionOption]
+
+    def buildJoin(name: String, okTo: String): DataRecord[ActionOption]
+    def buildFork(name: String, afterNames: List[String]): DataRecord[ActionOption]
+    def buildDecision(name: String, defaultName: String, cases: List[(Predicate, Route)]): DataRecord[ActionOption]
+    def buildKill(name: String): DataRecord[ActionOption]
+}
 
 case class Kill(name: String) extends Work
 

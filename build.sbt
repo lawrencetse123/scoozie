@@ -33,8 +33,7 @@ libraryDependencies ++= Seq(
   "org.specs2" %% "specs2-core" % "3.6.6" % "test",
   "com.google.guava" % "guava" % "19.0",
   "org.scala-lang.modules" %% "scala-xml" % "1.0.5",
-  "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4",
-  "org.scalaxb" % "scalaxb_2.11" % "1.4.0"
+  "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4"
 )
 
 resolvers ++= Seq(

@@ -64,7 +64,7 @@ case class FsJob(name: String, tasks: List[FsTask]) extends Job[FS] {
     override val jobName = s"fs_$name"
     override val record = DataRecord(None, Some("fs"), FS( //        delete = tasks flatMap {
     //            case Rm(path) => Some(DELETE(path))
-    //            case _        => None
+    //            case _        => Nonel
     //        },
     //        mkdir = tasks flatMap {
     //            case MkDir(path) => Some(MKDIR(path))

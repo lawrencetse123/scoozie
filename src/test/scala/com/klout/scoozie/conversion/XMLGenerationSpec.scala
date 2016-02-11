@@ -5,8 +5,9 @@
 package com.klout.scoozie.conversion
 
 import com.klout.scoozie.Scoozie
-import com.klout.scoozie.dsl.{ End, Job, Start, Workflow }
+import com.klout.scoozie.dsl.{ End, Job, Start }
 import com.klout.scoozie.jobs.{ JavaJob, MapReduceJob }
+import com.klout.scoozie.workflow.WorkflowImpl
 import oozie._
 import org.specs2.mutable._
 
@@ -133,7 +134,7 @@ class XMLGenerationSpec extends Specification {
 
             val firstJob = MyShell("test") dependsOn Start
             val end = End dependsOn firstJob
-            val workflow = Workflow("test-user-action", end)
+            val workflow = WorkflowImpl("test-user-action", end)
 
             val expectedResult =
                 """<workflow-app name="test-user-action" xmlns="uri:oozie:workflow:0.5">
@@ -163,7 +164,7 @@ class XMLGenerationSpec extends Specification {
                 )
             ) dependsOn firstJob
             val end = End dependsOn jsonJob
-            val wf = Workflow("test-post-processing", end)
+            val wf = WorkflowImpl("test-post-processing", end)
 
             Scoozie(wf) must_== postProcessedXml
         }

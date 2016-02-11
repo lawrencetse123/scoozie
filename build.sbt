@@ -89,3 +89,10 @@ releaseProcess := Seq[ReleaseStep](
   commitNextVersion,
   pushChanges
 )
+
+publishTo in ThisBuild := {
+  if (version.value.trim.endsWith("SNAPSHOT"))
+    Some(Resolver.file("file",  new File( "maven-repo/snapshots" )) )
+  else
+    Some(Resolver.file("file",  new File( "maven-repo/releases" )) )
+}

@@ -3,6 +3,9 @@
 ///
 
 import ScalaxbKeys._
+import sbtrelease._
+import ReleaseStateTransformations._
+import ReleasePlugin.autoImport._
 import scalariform.formatter.preferences._
 import AssemblyKeys._
 
@@ -12,22 +15,7 @@ name := "scoozie"
 
 organization := "com.klout"
 
-version := "0.5.6"
-
 scalaVersion := "2.11.7"
-
-mergeStrategy in assembly <<= (mergeStrategy in assembly) { (old) => {
-  case PathList("META-INF", xs@_*) =>
-    (xs map {
-      _.toLowerCase
-    }) match {
-      case "services" :: xs => MergeStrategy.filterDistinctLines
-      case ("spring.schemas" :: Nil) | ("spring.handlers" :: Nil) => MergeStrategy.filterDistinctLines
-      case _ => MergeStrategy.discard
-    }
-  case _ => MergeStrategy.first
-}
-}
 
 libraryDependencies ++= Seq(
   "org.specs2" %% "specs2-core" % "3.6.6" % "test",
@@ -88,10 +76,16 @@ scalacOptions ++= Seq(
   "-language:implicitConversions"
 )
 
-publishTo := Some("kloutLibraryReleases" at "http://maven-repo:8081/artifactory/libs-release-local")
-
-credentials := Credentials(Path.userHome / ".ivy2" / ".credentials") :: Nil
-
-
-
-
+releaseProcess := Seq[ReleaseStep](
+  inquireVersions,
+  runClean,
+  runTest,
+  setReleaseVersion,
+  commitReleaseVersion,
+  tagRelease,
+  releaseStepTask(assembly),
+  publishArtifacts,
+  setNextVersion,
+  commitNextVersion,
+  pushChanges
+)

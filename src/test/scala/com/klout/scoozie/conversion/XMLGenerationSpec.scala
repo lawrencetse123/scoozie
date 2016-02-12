@@ -9,12 +9,85 @@ import com.klout.scoozie.dsl.{ End, Job, Start }
 import com.klout.scoozie.jobs.{ JavaJob, MapReduceJob }
 import com.klout.scoozie.workflow.WorkflowImpl
 import oozie._
+
 import org.specs2.mutable._
 
 import scalaxb._
 
 class XMLGenerationSpec extends Specification {
     "XML Generation" should {
+        "be able to successfully generate a bundle" in {
+            import oozie.bundle._
+
+            val bundle = BUNDLEu45APP(
+                name = "APPNAME",
+                parameters = Some(PARAMETERS(Seq(
+                    Property(name = "appPath"),
+                    Property(name = "appPath2", value = Some("hdfs://foo:9000/user/joe/job/job.properties"))
+                ))),
+                controls = Some(CONTROLS(Some(CONTROLSSequence1(Some("${kickOffTime}"))))),
+                coordinator = Seq(
+                    COORDINATOR(
+                        appu45path = "${appPath}",
+                        name = "coordJobFromBundle1",
+                        configuration = Some(CONFIGURATION(Seq(
+                            Property2(name = "startTime1", value = "${START_TIME}"),
+                            Property2(name = "endTime1", value = "${END_TIME}")
+                        )))),
+                    COORDINATOR(
+                        appu45path = "${appPath}",
+                        name = "coordJobFromBundle2",
+                        configuration = Some(CONFIGURATION(Seq(
+                            Property2(name = "startTime2", value = "${START_TIME2}"),
+                            Property2(name = "endTime2", value = "${END_TIME2}")
+                        ))))
+                )
+            )
+
+            val expectedResult = """<bundle-app name="APPNAME" xmlns="uri:oozie:bundle:0.2">
+                                   |    <parameters>
+                                   |        <property>
+                                   |            <name>appPath</name>
+                                   |        </property>
+                                   |        <property>
+                                   |            <name>appPath2</name>
+                                   |            <value>hdfs://foo:9000/user/joe/job/job.properties</value>
+                                   |        </property>
+                                   |    </parameters>
+                                   |    <controls>
+                                   |        <kick-off-time>${kickOffTime}</kick-off-time>
+                                   |    </controls>
+                                   |    <coordinator name="coordJobFromBundle1">
+                                   |        <app-path>${appPath}</app-path>
+                                   |        <configuration>
+                                   |            <property>
+                                   |                <name>startTime1</name>
+                                   |                <value>${START_TIME}</value>
+                                   |            </property>
+                                   |            <property>
+                                   |                <name>endTime1</name>
+                                   |                <value>${END_TIME}</value>
+                                   |            </property>
+                                   |        </configuration>
+                                   |    </coordinator>
+                                   |    <coordinator name="coordJobFromBundle2">
+                                   |        <app-path>${appPath}</app-path>
+                                   |        <configuration>
+                                   |            <property>
+                                   |                <name>startTime2</name>
+                                   |                <value>${START_TIME2}</value>
+                                   |            </property>
+                                   |            <property>
+                                   |                <name>endTime2</name>
+                                   |                <value>${END_TIME2}</value>
+                                   |            </property>
+                                   |        </configuration>
+                                   |    </coordinator>
+                                   |</bundle-app>""".stripMargin
+
+            Scoozie(bundle) must_== expectedResult
+        }
+
         "be able to successfully generate a coordinator" in {
             import oozie.coordinator._
 

@@ -17,8 +17,15 @@ organization := "com.klout"
 
 scalaVersion := "2.11.7"
 
+val oozieVersion = "4.2.0"
+
+val hadoopVersion = "2.5.2"
+
 libraryDependencies ++= Seq(
   "org.specs2" %% "specs2-core" % "3.6.6" % "test",
+  "org.apache.oozie" % "oozie-client" % oozieVersion,
+  "org.apache.oozie" % "oozie-core" % oozieVersion,
+  "org.apache.hadoop" % "hadoop-common" % hadoopVersion,
   "com.google.guava" % "guava" % "19.0",
   "org.scala-lang.modules" %% "scala-xml" % "1.0.5",
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4"

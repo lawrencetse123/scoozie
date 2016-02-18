@@ -4,18 +4,13 @@
 
 package com.klout.scoozie.runner
 
+import java.io.{FileWriter, PrintWriter}
 import java.util.{Date, Properties}
 
-import oozie.coordinator.ACTION
-import oozie.coordinator.CONFIGURATION
 import oozie.coordinator.COORDINATORu45APP
-import oozie.coordinator.Property2
-import oozie.coordinator.WORKFLOW
 import com.klout.scoozie.Scoozie
 import com.klout.scoozie.conversion.Conversion
 import com.klout.scoozie.dsl._
-import com.klout.scoozie.jobs.NoOpJob
-import com.klout.scoozie.workflow.WorkflowImpl
 import oozie.workflow.{WORKFLOWu45APP, WORKFLOWu45APPOption}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FSDataOutputStream, FileSystem, Path}
@@ -125,71 +120,60 @@ abstract class ScoozieWorkflowApp[T, ActionOption](wf: WorkflowApp,
                                                    properties: Option[Map[String, String]] = None,
                                                    postprocessing: Option[XmlPostProcessing] = Some(XmlPostProcessing.Default))
   extends ScooizeApp(WorkflowApp, wf.name, properties = properties, propertiesFile = propertiesFile) {
-
-  /*
- * Usage is java -cp <...> com.klout.scoozie.ObjectName today
- * -todayString=foo2 -yesterdayString=foo3 ...
- */
-//  override def main(args: Array[String]) {
-
-
-
-    //run
     RunWorkflow(wf, appPath, config, postprocessing, appType) match {
       case Left(_) => throw new RuntimeException("error: workflow execution failed")
       case Right(_) => Unit
     }
-//  }
 }
 
-//abstract class CliApp(wfs: List[Workflow], postprocessing: Option[XmlPostProcessing] = Some(XmlPostProcessing.Default)) extends App {
-//
-//    override def main(args: Array[String]) {
-//        var continue = true
-//        while (continue) {
-//            println("choose a workflow for more information: ")
-//            var index = 0
-//            wfs map (wf => {
-//                println(index + " -> " + wf.name)
-//                index += 1
-//            })
-//            val ln = io.Source.stdin.getLines
-//            val choice = ln.next.toInt
-//            if (choice < 0 || choice >= wfs.length) {
-//                println("invalid choice")
-//            } else {
-//                println(wfs(choice))
-//                val ln = io.Source.stdin.getLines
-//                println("generate xml for this workflow? y/n")
-//                val print = ln.next
-//                print match {
-//                    case "y" =>
-//                        val xmlString = RunWorkflow.getXMLString(wfs(choice), postprocessing)
-//                        println("input filename to write output to")
-//                        val outName = ln.next
-//                        println("print to screen? y/n")
-//                        val p2Screen = ln.next
-//                        if (p2Screen == "y")
-//                            println(xmlString)
-//                        writeToFile(xmlString, outName)
-//                    case _ =>
-//                }
-//            }
-//            println("exit? y/n")
-//            val exit = ln.next
-//            exit match {
-//                case "y" => continue = false
-//                case _   => continue = true
-//            }
-//        }
-//    }
-//
-//    def writeToFile(toWrite: String, outfile: String) = {
-//        val out = new PrintWriter(new FileWriter(outfile))
-//        out.println(toWrite)
-//        out.close()
-//    }
-//}
+abstract class CliApp(wfs: List[WorkflowApp], postprocessing: Option[XmlPostProcessing] = Some(XmlPostProcessing.Default)) extends App {
+
+    override def main(args: Array[String]) {
+        var continue = true
+        while (continue) {
+            println("choose a workflow for more information: ")
+            var index = 0
+            wfs map (wf => {
+                println(index + " -> " + wf.name)
+                index += 1
+            })
+            val ln = io.Source.stdin.getLines
+            val choice = ln.next.toInt
+            if (choice < 0 || choice >= wfs.length) {
+                println("invalid choice")
+            } else {
+                println(wfs(choice))
+                val ln = io.Source.stdin.getLines
+                println("generate xml for this workflow? y/n")
+                val print = ln.next
+                print match {
+                    case "y" =>
+                        val xmlString = RunWorkflow.getXMLString(wfs(choice), postprocessing)
+                        println("input filename to write output to")
+                        val outName = ln.next
+                        println("print to screen? y/n")
+                        val p2Screen = ln.next
+                        if (p2Screen == "y")
+                            println(xmlString)
+                        writeToFile(xmlString, outName)
+                    case _ =>
+                }
+            }
+            println("exit? y/n")
+            val exit = ln.next
+            exit match {
+                case "y" => continue = false
+                case _   => continue = true
+            }
+        }
+    }
+
+    def writeToFile(toWrite: String, outfile: String) = {
+        val out = new PrintWriter(new FileWriter(outfile))
+        out.println(toWrite)
+        out.close()
+    }
+}
 
 
 case class RetryableOozieClient(client: OozieClient) {

@@ -6,6 +6,12 @@ package com.klout.scoozie.runner
 
 import java.util.{Date, Properties}
 
+import oozie.coordinator.ACTION
+import oozie.coordinator.CONFIGURATION
+import oozie.coordinator.COORDINATORu45APP
+import oozie.coordinator.Property2
+import oozie.coordinator.WORKFLOW
+import com.klout.scoozie.Scoozie
 import com.klout.scoozie.conversion.Conversion
 import com.klout.scoozie.dsl._
 import com.klout.scoozie.jobs.NoOpJob
@@ -19,49 +25,121 @@ import scala.collection.JavaConverters._
 
 case class OozieConfig(oozieUrl: String, properties: Map[String, String])
 
-abstract class ScoozieApp[T, ActionOption](
-                                            wf: WorkflowApp,
-                                            propertiesFile: Option[String] = None,
-                                            properties: Option[Map[String, String]] = None,
-                                            postprocessing: Option[XmlPostProcessing] = Some(XmlPostProcessing.Default))
+sealed trait ScoozieAppType {
+  val name: String // = this.getClass.getSimpleName.dropRight(1)
+  val oozieConfigKey: String
+}
+
+object BundleApp extends ScoozieAppType {
+  val name = "bundle"
+  val oozieConfigKey = OozieClient.BUNDLE_APP_PATH
+}
+
+object CoordinatorApp extends ScoozieAppType {
+  val name = "coordinator"
+  val oozieConfigKey = OozieClient.COORDINATOR_APP_PATH
+}
+
+object WorkflowApp extends ScoozieAppType {
+  val name = "workflow"
+  val oozieConfigKey = OozieClient.APP_PATH
+}
+
+
+private[scoozie] abstract class ScooizeApp(val appType: ScoozieAppType,
+                                           val appName: String,
+                                           propertiesFile: Option[String] = None,
+                                           properties: Option[Map[String, String]] = None)
   extends App {
+
+  System.setProperty("user.name", "svc_wow") //hack to set user
+  val argString = ("" /: args) (_ + _.toString)
+  //set up properties / configuration
+  val usage = "java -cp <...> com.your.scoozie.app.ObjectName -todayString=foo -yesterdayString=foo ..."
+  var propertyMap = properties.getOrElse(propertiesFile.map(Helpers.readProperties).get)
+  if (args nonEmpty) {
+    args foreach { arg =>
+      if (arg(0) != '-')
+        throw new RuntimeException("error: usage is " + usage)
+      propertyMap = Helpers.addProperty(propertyMap, arg.tail)
+    }
+  }
+  val oozieUrl = propertyMap.get("scoozie.oozie.url").get
+  val config = OozieConfig(oozieUrl, propertyMap)
+
+  val rawAppPath = propertyMap.get(s"scoozie.${appType.oozieConfigKey}").get
+  val appPath = {
+    if (!rawAppPath.endsWith(".xml")) {
+      val suffix = propertyMap.get("pathSuffix") match {
+        case Some(toSuffix) => "_" + toSuffix
+        case None => ""
+      }
+      rawAppPath + s"scoozie_${appType.name}_$appName$suffix.xml"
+    } else
+      throw new RuntimeException("error: you should not overwrite the .xml")
+  }
+
+
+
+
+
+}
+
+
+/**
+  *
+  * @param coord
+  * @param propertiesFile
+  * @param properties
+  * @param postprocessing
+  */
+abstract class ScoozieCoordinatorApp(coord: COORDINATORu45APP,
+                                     wfs: Seq[WorkflowApp],
+                                     propertiesFile: Option[String] = None,
+                                     properties: Option[Map[String, String]] = None,
+                                     postprocessing: Option[XmlPostProcessing] = Some(XmlPostProcessing.Default))
+  extends ScooizeApp(CoordinatorApp, coord.name, properties = properties, propertiesFile = propertiesFile) {
+
+  //write all workflows
+  wfs.foreach(wf => RunWorkflow.prepWorkflow(wf, appPath, propertyMap, postprocessing))
+
+  val coordXML = Scoozie(coordinator = coord)
+  println(coordXML)
+
+  RunWorkflow.execWorkflow(appPath, config, appType)
+
+
+}
+
+/**
+  *
+  * @param wf
+  * @param propertiesFile
+  * @param properties
+  * @param postprocessing
+  * @tparam T
+  * @tparam ActionOption
+  */
+abstract class ScoozieWorkflowApp[T, ActionOption](wf: WorkflowApp,
+                                                   propertiesFile: Option[String] = None,
+                                                   properties: Option[Map[String, String]] = None,
+                                                   postprocessing: Option[XmlPostProcessing] = Some(XmlPostProcessing.Default))
+  extends ScooizeApp(WorkflowApp, wf.name, properties = properties, propertiesFile = propertiesFile) {
 
   /*
  * Usage is java -cp <...> com.klout.scoozie.ObjectName today
  * -todayString=foo2 -yesterdayString=foo3 ...
  */
-  override def main(args: Array[String]) {
-    System.setProperty("user.name", "svc_wow")
-    val argString = ("" /: args) (_ + _.toString)
-    //set up properties / configuration
-    val usage = "java -cp <...> com.klout.scoozie.ObjectName -todayString=foo -yesterdayString=foo ..."
-    var propertyMap = properties.getOrElse(propertiesFile.map(Helpers.readProperties).get)
-    if (args nonEmpty) {
-      args foreach { arg =>
-        if (arg(0) != '-')
-          throw new RuntimeException("error: usage is " + usage)
-        propertyMap = Helpers.addProperty(propertyMap, arg.tail)
-      }
-    }
-    val rawAppPath = propertyMap.get("scoozie.wf.application.path").get
-    val appPath = {
-      if (!rawAppPath.endsWith(".xml")) {
-        val suffix = propertyMap.get("pathSuffix") match {
-          case Some(toSuffix) => "_" + toSuffix
-          case None => ""
-        }
-        rawAppPath + "scoozie_" + wf.name + suffix + ".xml"
-      } else
-        throw new RuntimeException("error: you should not overwrite the .xml")
-    }
-    val oozieUrl = propertyMap.get("scoozie.oozie.url").get
-    val config = OozieConfig(oozieUrl, propertyMap)
+//  override def main(args: Array[String]) {
+
+
+
     //run
-    RunWorkflow(wf, appPath, config, postprocessing) match {
+    RunWorkflow(wf, appPath, config, postprocessing, appType) match {
       case Left(_) => throw new RuntimeException("error: workflow execution failed")
       case Right(_) => Unit
     }
-  }
+//  }
 }
 
 //abstract class CliApp(wfs: List[Workflow], postprocessing: Option[XmlPostProcessing] = Some(XmlPostProcessing.Default)) extends App {
@@ -113,62 +191,6 @@ abstract class ScoozieApp[T, ActionOption](
 //    }
 //}
 
-object Helpers {
-
-  /*
- * Requires: propertyFile is the path to a property file containing properties formatted as follows:
- *   PropertyName1=PropertyValue1
- *   PropertyName2=PropertyValue2
- *   ...
- */
-  def readProperties(propertyFile: String): Map[String, String] = {
-    var propertyMap: Map[String, String] = Map.empty
-    io.Source.fromFile(propertyFile).getLines.foreach { line =>
-      if (!line.isEmpty && line(0) != '#') {
-        propertyMap = addProperty(propertyMap, line)
-      }
-    }
-    propertyMap
-  }
-
-  def addProperty(propertyMap: Map[String, String], propertyString: String): Map[String, String] = {
-    val property: Array[String] = propertyString.split("=")
-    if (property.length != 2)
-      throw new RuntimeException("error: property file not correctly formatted")
-    propertyMap + (property(0) -> property(1))
-  }
-
-  def retryable[T](body: () => T): T = {
-    val backoff: Double = 1.5
-    def retryable0(body: () => T, remaining: Int, retrySleep: Double): T = {
-      try {
-        body()
-      } catch {
-        case t: Throwable =>
-          println("ERROR : Unexpected exception ")
-          t.printStackTrace
-          if (remaining > 0) {
-            println("Retries left: " + remaining + ". Sleeping for " + retrySleep)
-            Thread.sleep(retrySleep.toLong)
-            retryable0(body, remaining - 1, retrySleep * backoff)
-          } else
-            throw new RuntimeException("error: Allowed number of retries exceeded. Exiting with failure.")
-      }
-    }
-    retryable0(body, 5, 2000)
-  }
-}
-
-object Workflows {
-  def MaxwellPipeline: WorkflowApp = {
-    val featureGen = NoOpJob("FeatureGeneration") dependsOn Start
-    val scoreCalc = NoOpJob("ScoreCalculation") dependsOn featureGen
-    val momentGen = NoOpJob("MomentGeneration") dependsOn scoreCalc
-    val end = End dependsOn momentGen
-    WorkflowImpl("maxwell-pipeline-wf", end)
-  }
-
-}
 
 case class RetryableOozieClient(client: OozieClient) {
 
@@ -190,8 +212,7 @@ case class RetryableOozieClient(client: OozieClient) {
 
 }
 
-case class XmlPostProcessing(
-                              substitutions: Map[String, String])
+case class XmlPostProcessing(substitutions: Map[String, String])
 
 object XmlPostProcessing {
   val Default = XmlPostProcessing(
@@ -244,14 +265,14 @@ object RunWorkflow {
     workflowMap mapValues (_.successOrFail())
   }
 
-  def async[T, ActionOption](workflow: WorkflowApp, appPath: String, config: OozieConfig, postprocessing: Option[XmlPostProcessing]): AsyncOozieWorkflow = {
+  def async[T, ActionOption](workflow: WorkflowApp, appPath: String, config: OozieConfig, postprocessing: Option[XmlPostProcessing], appType: ScoozieAppType): AsyncOozieWorkflow = {
     prepWorkflow(workflow, appPath, config.properties, postprocessing)
-    getOozieWorkflow(appPath, config)
+    getOozieWorkflow(appPath, config, appType)
   }
 
-  def apply[T, ActionOption](workflow: WorkflowApp, appPath: String, config: OozieConfig, postprocessing: Option[XmlPostProcessing]): Either[OozieError, OozieSuccess] = {
+  def apply[T, ActionOption](workflow: WorkflowApp, appPath: String, config: OozieConfig, postprocessing: Option[XmlPostProcessing], appType: ScoozieAppType): Either[OozieError, OozieSuccess] = {
     prepWorkflow(workflow, appPath, config.properties, postprocessing)
-    execWorkflow(appPath, config)
+    execWorkflow(appPath, config, appType)
   }
 
   def prepWorkflow[T, ActionOption](workflow: WorkflowApp, appPathString: String, properties: Map[String, String], postprocessing: Option[XmlPostProcessing]) = {
@@ -298,18 +319,20 @@ object RunWorkflow {
     newProp
   }
 
+
+
   /*
- * Executes the workflow, retrying if necessary
- */
-  def getOozieWorkflow(appPath: String, config: OozieConfig): AsyncOozieWorkflow = {
+* Executes the workflow, retrying if necessary
+*/
+  def getOozieWorkflow(appPath: String, config: OozieConfig, appType: ScoozieAppType): AsyncOozieWorkflow = {
     val oc = RetryableOozieClient(new OozieClient(config.oozieUrl))
     // create a workflow job configuration and set the workflow application path
     val conf = oc.createConfiguration()
     //set workflow parameters
     config.properties foreach (pair => conf.setProperty(pair._1, pair._2))
-    conf.setProperty(OozieClient.APP_PATH, appPath)
+    conf.setProperty(appType.oozieConfigKey, appPath)
     //submit and start the workflow job
-    val jobId: String = oc.run(conf);
+    val jobId: String = oc.run(conf)
     val wfJob: WorkflowJob = oc.getJobInfo(jobId)
     val consoleUrl: String = wfJob.getConsoleUrl
     println(s"Workflow job $jobId submitted and running")
@@ -318,9 +341,13 @@ object RunWorkflow {
     AsyncOozieWorkflow(oc, jobId, consoleUrl)
   }
 
-  def execWorkflow(appPath: String, config: OozieConfig): Either[OozieError, OozieSuccess] = {
 
-    val async = getOozieWorkflow(appPath, config)
+  def execWorkflow(appPath: String, config: OozieConfig, appType: ScoozieAppType): Either[OozieError, OozieSuccess] = {
+
+    val async = getOozieWorkflow(appPath, config, appType)
+
+    println(config)
+    config.properties.foreach(println)
 
     sequence(Map("blah" -> async)).map(_._2).toList.headOption match {
       case Some(result) => result

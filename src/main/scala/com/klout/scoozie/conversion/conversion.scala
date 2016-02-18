@@ -31,13 +31,13 @@ case class GraphNode(var name: String,
 
     def getName(n: GraphNode) = n.name
 
-    def beforeNames = before map (getName(_))
+    def beforeNames = before map getName _
 
-    def afterNames = after map (getName(_))
+    def afterNames = after map getName _
 
-    def decisionBeforeNames = decisionBefore map (getName(_))
+    def decisionBeforeNames = decisionBefore map getName _
 
-    def decisionAfterNames = decisionAfter map (getName(_))
+    def decisionAfterNames = decisionAfter map getName _
 
     override def toString =
         s"GraphNode: name=[$name], option=[$workflowOption], before=[$beforeNames], after=[$afterNames], decisionBefore=[$decisionBeforeNames], decisionAfter=[$decisionAfterNames], decisionRoute=[$decisionRoutes], errorTo=[$errorTo]"

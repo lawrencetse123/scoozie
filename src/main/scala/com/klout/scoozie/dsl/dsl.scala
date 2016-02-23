@@ -3,6 +3,7 @@
  */
 
 package com.klout.scoozie.dsl
+
 import scalaxb._
 
 sealed trait Work {

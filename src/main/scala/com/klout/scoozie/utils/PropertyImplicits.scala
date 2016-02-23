@@ -7,11 +7,11 @@ object PropertyImplicits {
     implicit class MapWrapper(val map: Map[String, String]) extends AnyVal {
         def getAsParameter(key: String): String = "${" + map.get(key).get + "}"
         def toProperties: Properties = {
+            import scala.collection.JavaConversions._
             val properties = new java.util.Properties
-            map.foldLeft(properties){ case (props, (k,v)) =>
-                props.put(k,v)
-                props
-            }
+            properties.putAll(map)
+            properties
+
         }
     }
 

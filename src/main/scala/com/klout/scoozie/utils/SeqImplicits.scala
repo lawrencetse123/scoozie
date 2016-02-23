@@ -4,16 +4,6 @@ import scala.collection.generic.CanBuildFrom
 import scala.util.Try
 
 object SeqImplicits {
-  implicit class RichStringSeq(val underlying: Seq[String]) extends AnyVal {
-    def toCsv = underlying.mkString(", ")
-  }
-
-  implicit class RichTrySeq[A](val underlying: Seq[Try[A]]) extends AnyVal {
-    def sequence: Try[Seq[A]] = {
-      underlying.foldLeft(Try(Seq[A]()))((acc, curr) => for { s <- acc; a <- curr } yield s :+ a)
-    }
-  }
-
   /**
     * Converts a Seq[Try[T]] to a Try[Seq[T]].
     *

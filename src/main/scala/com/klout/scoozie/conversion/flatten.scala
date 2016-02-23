@@ -99,7 +99,7 @@ object Flatten {
 
         var accum: RefMap[Dependency, GraphNode] = RefMap[Dependency, GraphNode](Map.empty)
 
-        def flatten0[A](currentDep: Dependency, after: Set[GraphNode], inDecision: Boolean = false) {
+        def flatten0(currentDep: Dependency, after: Set[GraphNode], inDecision: Boolean = false) {
             accum get currentDep match {
                 //check if we've already processed the dependency. If so, just update after to include where we came from
                 case Some(alreadyThere) =>
@@ -116,7 +116,7 @@ object Flatten {
                             val endNode = GraphNode("end", WorkflowEnd)
                             deps foreach (flatten0(_, Set(endNode)))
 
-                        case Node(job: Job[A], deps) =>
+                        case Node(job: Job[_], deps) =>
                             val newNode = GraphNode(
                                 job.jobName,
                                 WorkflowJob(job),
@@ -125,7 +125,7 @@ object Flatten {
                             accum += currentDep -> newNode
                             deps foreach (flatten0(_, Set(newNode), inDecision))
 
-                        case Node(wf: Workflow[T, K], deps) =>
+                        case Node(wf: Workflow[_, _], deps) =>
                             val wfAccum = Flatten(wf)
                             accum ++= wfAccum
                             //special case for the last nodes in the workflow: let them know what's after them
@@ -174,7 +174,7 @@ object Flatten {
                                         alreadyThere.decisionAfter ++= RefSet(after.toSeq)
                                     case _ =>
                                         currDep match {
-                                            case Node(job: Job[A], deps) =>
+                                            case Node(job: Job[_], deps) =>
                                                 val newNode = GraphNode(
                                                     job.jobName,
                                                     WorkflowJob(job),
@@ -196,7 +196,7 @@ object Flatten {
                                     after foreach (_.before += graphNode)
                                 case _ =>
                                     node match {
-                                        case Node(job: Job[A], deps) =>
+                                        case Node(job: Job[_], deps) =>
                                             val newNode = GraphNode(
                                                 job.jobName,
                                                 WorkflowJob(job)

@@ -102,3 +102,15 @@ publishTo in ThisBuild := {
   else
     Some(Resolver.file("file",  new File( "maven-repo/releases" )) )
 }
+
+mergeStrategy in assembly <<= (mergeStrategy in assembly) { (old) =>
+  {
+    case PathList("META-INF", xs @ _*) =>
+      (xs map {_.toLowerCase}) match {
+        case "services" :: xs => MergeStrategy.filterDistinctLines
+        case ("spring.schemas" :: Nil) | ("spring.handlers" :: Nil) => MergeStrategy.filterDistinctLines
+        case _ => MergeStrategy.discard
+      }
+    case _ => MergeStrategy.first
+  }
+}

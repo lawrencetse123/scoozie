@@ -28,7 +28,9 @@ libraryDependencies ++= Seq(
   "org.apache.hadoop" % "hadoop-common" % hadoopVersion % "provided",
   "com.google.guava" % "guava" % "19.0",
   "org.scala-lang.modules" %% "scala-xml" % "1.0.5",
-  "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4"
+  "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4",
+  "org.scalaz" %%  "scalaz-core" %   "7.2.0",
+  "com.chuusai" %% "shapeless" % "2.3.0"
 )
 
 resolvers ++= Seq(
@@ -40,7 +42,7 @@ scalariformSettings
 
 ScalariformKeys.preferences := FormattingPreferences().
   setPreference(AlignParameters, true).
-  setPreference(IndentSpaces, 4).
+  setPreference(IndentSpaces, 2).
   setPreference(AlignSingleLineCaseStatements, true).
   setPreference(PreserveDanglingCloseParenthesis, true).
   setPreference(PreserveSpaceBeforeArguments, true)

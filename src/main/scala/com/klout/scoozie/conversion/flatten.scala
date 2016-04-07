@@ -95,7 +95,7 @@ case class RefWrap[T <: AnyRef](value: T) {
 }
 
 object Flatten {
-    def apply[T, K](workflow: Workflow[T, K]): RefMap[Dependency, GraphNode] = {
+    def apply[T](workflow: Workflow[T]): RefMap[Dependency, GraphNode] = {
 
         var accum: RefMap[Dependency, GraphNode] = RefMap[Dependency, GraphNode](Map.empty)
 
@@ -125,7 +125,7 @@ object Flatten {
                             accum += currentDep -> newNode
                             deps foreach (flatten0(_, Set(newNode), inDecision))
 
-                        case Node(wf: Workflow[_, _], deps) =>
+                        case Node(wf: Workflow[_], deps) =>
                             val wfAccum = Flatten(wf)
                             accum ++= wfAccum
                             //special case for the last nodes in the workflow: let them know what's after them

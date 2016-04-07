@@ -28,7 +28,8 @@ libraryDependencies ++= Seq(
   "org.apache.hadoop" % "hadoop-common" % hadoopVersion % "provided",
   "com.google.guava" % "guava" % "19.0",
   "org.scala-lang.modules" %% "scala-xml" % "1.0.5",
-  "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4"
+  "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4",
+  "joda-time" % "joda-time" % "2.9.2"
 )
 
 resolvers ++= Seq(
@@ -57,10 +58,9 @@ contentsSizeLimit in (Compile, scalaxb) := 20
 
 namedAttributes in(Compile, scalaxb) := true
 
-val workflowRoot = "oozie.workflow"
+val workflowRoot = "oozie.workflow_0_5"
 
 packageNames in scalaxb in Compile := Map(
-  uri("uri:oozie:workflow:0.2") -> workflowRoot,
   uri("uri:oozie:workflow:0.5") -> workflowRoot,
   uri("uri:oozie:hive-action:0.6") -> s"$workflowRoot.hive",
   uri("uri:oozie:shell-action:0.3") -> s"$workflowRoot.shell",
@@ -70,8 +70,8 @@ packageNames in scalaxb in Compile := Map(
   uri("uri:oozie:spark-action:0.1") -> s"$workflowRoot.spark",
   uri("uri:oozie:sqoop-action:0.4") -> s"$workflowRoot.sqoop",
   uri("uri:oozie:ssh-action:0.2") -> s"$workflowRoot.ssh",
-  uri("uri:oozie:coordinator:0.5") -> s"oozie.coordinator",
-  uri("uri:oozie:bundle:0.2") -> s"oozie.bundle"
+  uri("uri:oozie:coordinator:0.5") -> s"oozie.coordinator_0_5",
+  uri("uri:oozie:bundle:0.2") -> s"oozie.bundle_0_2"
 )
 
 scalacOptions ++= Seq(

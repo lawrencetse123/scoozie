@@ -5,8 +5,8 @@
 package com.klout.scoozie.jobs
 
 import com.klout.scoozie.dsl.Job
-import oozie.workflow._
-import oozie.workflow.hive.{ ACTION => HIVEACTION }
+import oozie.workflow_0_5._
+import oozie.workflow_0_5.hive.{ ACTION => HIVEACTION }
 import oozie._
 
 import scalaxb.DataRecord
@@ -17,7 +17,7 @@ case class MapReduceJob(name: String,
                         nameNode: String = JobUtils.nameNode,
                         jobTracker: String = JobUtils.jobTracker,
                         prepare: List[FsTask] = List.empty,
-                        configuration: ArgList = Nil) extends Job[MAPu45REDUCE] {
+                        configuration: ConfigurationList = Nil) extends Job[MAPu45REDUCE] {
     override val jobName = s"mr_$name"
     override val record = DataRecord(None, Some("map-reduce"), MAPu45REDUCE(
         jobu45tracker = Some(jobTracker),
@@ -27,7 +27,7 @@ case class MapReduceJob(name: String,
 }
 
 case class HiveJob(fileName: String,
-                   configuration: ArgList = Nil,
+                   configuration: ConfigurationList = Nil,
                    parameters: List[String] = List.empty,
                    prepare: List[FsTask] = List.empty,
                    jobXml: Option[Seq[String]] = None,
@@ -56,7 +56,7 @@ case class HiveJob(fileName: String,
     ))
 }
 
-// Node: There is a limitation with the way scalaxb creates the FS Task 
+// Node: There is a limitation with the way scalaxb creates the FS Task
 // case classes from workflow.xsd: It treats the different task types as
 // separate sequences so ordering among the types is not possible.
 // Need to address later.
@@ -95,7 +95,7 @@ case class ChMod(path: String, permissions: String, dirFiles: String) extends Fs
 
 case class JavaJob(mainClass: String,
                    prepare: List[FsTask] = List.empty,
-                   configuration: ArgList = Nil,
+                   configuration: ConfigurationList = Nil,
                    jvmOps: Option[String] = None,
                    args: List[String] = Nil) extends Job[JAVA] {
     val domain = mainClass.substring(mainClass.lastIndexOf(".") + 1)
@@ -116,7 +116,10 @@ case class NoOpJob(name: String) extends Job[String] {
 }
 
 object `package` {
-    type ArgList = List[(String, String)]
+    type Name = String
+    type Value = String
+    type ConfigurationList = List[(Name, Value)]
+    type ParameterList = List[(Name, Option[Value])]
 }
 
 object JobUtils {
@@ -138,9 +141,9 @@ object JobUtils {
             None
     }
 
-    def getConfiguration(config: ArgList) = {
+    def getConfiguration(config: ConfigurationList) = {
         if (config.nonEmpty)
-            Some(oozie.workflow.CONFIGURATION(config map (tuple => Property2(tuple._1, tuple._2))))
+            Some(oozie.workflow_0_5.CONFIGURATION(config map (tuple => Property2(tuple._1, tuple._2))))
         else
             None
     }

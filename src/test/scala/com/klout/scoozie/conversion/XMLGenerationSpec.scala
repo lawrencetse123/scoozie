@@ -4,12 +4,11 @@
 
 package com.klout.scoozie.conversion
 
-import com.klout.scoozie.Scoozie
-import com.klout.scoozie.dsl.{ End, Job, Start }
-import com.klout.scoozie.jobs.{ JavaJob, MapReduceJob }
-import com.klout.scoozie.workflow.WorkflowImpl
+import com.klout.scoozie.dsl._
+import com.klout.scoozie.jobs.{JavaJob, MapReduceJob}
+import com.klout.scoozie.writer.implicits._
 import oozie._
-
+import org.joda.time.{DateTime, DateTimeZone}
 import org.specs2.mutable._
 
 import scalaxb._
@@ -17,30 +16,23 @@ import scalaxb._
 class XMLGenerationSpec extends Specification {
     "XML Generation" should {
         "be able to successfully generate a bundle" in {
-            import oozie.bundle._
-
-            val bundle = BUNDLEu45APP(
+            val bundle = Bundle(
                 name = "APPNAME",
-                parameters = Some(PARAMETERS(Seq(
-                    Property(name = "appPath"),
-                    Property(name = "appPath2", value = Some("hdfs://foo:9000/user/joe/job/job.properties"))
-                ))),
-                controls = Some(CONTROLS(Some(CONTROLSSequence1(Some("${kickOffTime}"))))),
-                coordinator = Seq(
-                    COORDINATOR(
-                        appu45path = "${appPath}",
+                parameters = List("appPath" -> None, "appPath2" -> Some("hdfs://foo:9000/user/joe/job/job.properties")),
+                kickoffTime = Right("${kickOffTime}"),
+                coordinators = List(
+                    CoordinatorDescriptor(
                         name = "coordJobFromBundle1",
-                        configuration = Some(CONFIGURATION(Seq(
-                            Property2(name = "startTime1", value = "${START_TIME}"),
-                            Property2(name = "endTime1", value = "${END_TIME}")
-                        )))),
-                    COORDINATOR(
-                        appu45path = "${appPath}",
+                        path = Some("${appPath}"),
+                        coordinator = coordinator("coordJobFromBundle1"),
+                        configuration = List("startTime1" -> "${START_TIME}", "endTime1" -> "${END_TIME}")
+                    ),
+                    CoordinatorDescriptor(
                         name = "coordJobFromBundle2",
-                        configuration = Some(CONFIGURATION(Seq(
-                            Property2(name = "startTime2", value = "${START_TIME2}"),
-                            Property2(name = "endTime2", value = "${END_TIME2}")
-                        ))))
+                        path = Some("${appPath}"),
+                        coordinator = coordinator("coordJobFromBundle2"),
+                        configuration = List("startTime2" -> "${START_TIME2}", "endTime2" -> "${END_TIME2}")
+                    )
                 )
             )
 
@@ -85,14 +77,14 @@ class XMLGenerationSpec extends Specification {
                                    |    </coordinator>
                                    |</bundle-app>""".stripMargin
 
-            Scoozie(bundle) must_== expectedResult
+            bundle.toXml must_== expectedResult
         }
 
         "be able to successfully generate a coordinator" in {
-            import oozie.coordinator._
+            import oozie.coordinator_0_5._
 
-            val coordinator = COORDINATORu45APP(
-                parameters = None,
+            val coordinator = Coordinator(
+                parameters = Nil,
                 controls = Some(CONTROLS(Some(CONTROLSSequence1(
                     timeout = Some("10"),
                     concurrency = Some("${concurrency_level}"),
@@ -116,29 +108,28 @@ class XMLGenerationSpec extends Specification {
                             uriu45template = "${baseFsURI}/${YEAR}/${MONTH}/${DAY}/${HOUR}/${MINUTE}",
                             doneu45flag = None))
                     ))))),
-                inputu45events = Some(INPUTEVENTS(Seq(
+                inputEvents = Some(INPUTEVENTS(Seq(
                     DataRecord(None, Some("data-in"), DATAIN(
                         name = "input",
                         dataset = "din",
                         datainoption = Seq(DataRecord(None, Some("instance"), "${coord:current(0)}"))
                     ))))),
-                outputu45events = Some(OUTPUTEVENTS(Seq(DATAOUT(
+                outputEvents = Some(OUTPUTEVENTS(Seq(DATAOUT(
                     name = "output",
                     dataset = "dout",
                     instance = "${coord:current(1)}"
                 )))),
-                inputu45logic = None,
-                action = ACTION(WORKFLOW(
-                    appu45path = "${wf_app_path}",
-                    configuration = Some(CONFIGURATION(Seq(
-                        Property2(name = "wfInput", value = "${coord:dataIn('input')}"),
-                        Property2(name = "wfOutput", value = "${coord:dataOut('output')}")
-                    ))))),
-                frequency = "${coord:days(1)}",
-                start = "2009-01-02T08:00Z",
-                end = "2009-01-04T08:00Z",
-                timezone = "America/Los_Angeles",
-                name = "hello-coord"
+                inputLogic = None,
+                workflowPath = Some("${wf_app_path}"),
+                configuration = List(
+                    "wfInput" -> "${coord:dataIn('input')}",
+                    "wfOutput" -> "${coord:dataOut('output')}"),
+                frequency = Days(1),
+                start = DateTime.parse("2009-01-02T16:00Z"),
+                end = DateTime.parse("2009-01-02T16:00Z").plusDays(2),
+                timezone = DateTimeZone.forID("America/Los_Angeles"),
+                name = "hello-coord",
+                workflow = workflow
             )
 
             val expectedResult = """<coordinator-app timezone="America/Los_Angeles" end="2009-01-04T08:00Z" start="2009-01-02T08:00Z" frequency="${coord:days(1)}" name="hello-coord" xmlns="uri:oozie:coordinator:0.4">
@@ -183,11 +174,11 @@ class XMLGenerationSpec extends Specification {
                                    |    </action>
                                    |</coordinator-app>""".stripMargin
 
-            Scoozie(coordinator) must_== expectedResult
+            coordinator.toXml must_== expectedResult
         }
 
         "given a user created job it should generate the correct workflow" in {
-            import oozie.workflow.shell.ACTION
+            import oozie.workflow_0_5.shell.ACTION
 
             case class MyShell(jobName: String = "shell-test") extends Job[ACTION] {
                 override val record: DataRecord[ACTION] = DataRecord(None, Some("shell"), ACTION(
@@ -207,7 +198,7 @@ class XMLGenerationSpec extends Specification {
 
             val firstJob = MyShell("test") dependsOn Start
             val end = End dependsOn firstJob
-            val workflow = WorkflowImpl("test-user-action", end)
+            val workflow = Workflow("test-user-action", end)
 
             val expectedResult =
                 """<workflow-app name="test-user-action" xmlns="uri:oozie:workflow:0.5">
@@ -225,7 +216,7 @@ class XMLGenerationSpec extends Specification {
                   |    <end name="end"/>
                   |</workflow-app>""".stripMargin
 
-            Scoozie(workflow) must_== expectedResult
+            workflow.toXml must_== expectedResult
         }
 
         "give workflow with double quotes rather than &quot;" in {
@@ -237,10 +228,38 @@ class XMLGenerationSpec extends Specification {
                 )
             ) dependsOn firstJob
             val end = End dependsOn jsonJob
-            val wf = WorkflowImpl("test-post-processing", end)
+            val workflow = Workflow("test-post-processing", end)
 
-            Scoozie(wf) must_== postProcessedXml
+
+            workflow.write("/home/roman/projects/scoozie-working/scoozie-public/scoozie/src/test/resources/writer-tests/bundle-write-test/bundle.xml")
+            workflow.toXml must_== postProcessedXml
         }
+    }
+
+    val workflow = {
+        val firstJob = MapReduceJob("first") dependsOn Start
+        val jsonJob = JavaJob(
+            mainClass = "test.class",
+            configuration = List(
+                "testJson" -> """{ "foo" : "bar" }"""
+            )
+        ) dependsOn firstJob
+        val end = End dependsOn jsonJob
+
+        Workflow("test-post-processing", end)
+    }
+
+    def coordinator(name: String) = {
+        Coordinator(
+            name = name,
+            workflow = workflow,
+            timezone = DateTimeZone.forID("Australia/Sydney"),
+            start = DateTime.now(),
+            end = DateTime.now().plusDays(10),
+            frequency = Days(24),
+            configuration = Nil,
+            workflowPath = Some("/fake/path")
+        )
     }
 
     val postProcessedXml =

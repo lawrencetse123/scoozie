@@ -14,7 +14,10 @@ import com.klout.scoozie.dsl._
 import oozie.workflow.{ WORKFLOWu45APP, WORKFLOWu45APPOption }
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{ FSDataOutputStream, FileSystem, Path }
-import org.apache.oozie.client.{ Job, OozieClient, WorkflowAction, WorkflowJob }
+import org.apache.oozie.client.Job
+import org.apache.oozie.client._
+import org.slf4j.LoggerFactory
+import shapeless.::
 
 import scala.collection.JavaConverters._
 
@@ -317,6 +320,8 @@ case class AsyncOozieWorkflow(oc: RetryableOozieClient, jobId: String, consoleUr
 
 object RunWorkflow {
 
+  val log = LoggerFactory.getLogger(getClass)
+
   def writeJobXML(appPathString: String, properties: Map[String, String], xmlData: String): Unit = {
     val resolvedAppPath = resolveProperty(appPathString, properties)
     val appPath: Path = new Path(resolvedAppPath)
@@ -373,15 +378,35 @@ object RunWorkflow {
     processedXml
   }
 
-  def removeCoordinatorJob(appName: String, config: OozieConfig): Unit = {
+  def removeCoordinatorJob(appName: String, config: OozieConfig, killRunning: Boolean = true): Unit = {
     val oc = RetryableOozieClient(new OozieClient(config.oozieUrl))
 
-    import scala.collection.JavaConversions._
-    val coordJobsToRemove = oc.client.getCoordJobsInfo(s"NAME=$appName", 1, 100).filter{
-      cj => cj.getAppName == appName && cj.getStatus == Job.Status.RUNNING
-    }.map(_.getId).toSeq
+    val activeCoordStates = Job.Status.RUNNING :: Job.Status.PAUSED :: Job.Status.SUSPENDED :: Nil
 
-    coordJobsToRemove.foreach(oc.client.kill)
+    import scala.collection.JavaConversions._
+    import shapeless._
+    import syntax.std.tuple._
+    import scala.language.higherKinds
+
+    object idSeq extends Poly1 {
+      implicit def caseSeqCJ[T <: CoordinatorJob, L[S] <: Seq[S]] = at[L[T]]{ _.map(_.getId) }
+    }
+
+    val (coodJobsToRmWithRunningActions: Seq[String], coodJobsToRm: Seq[String]) =
+      oc.client.getCoordJobsInfo(s"NAME=$appName", 1, 1000).filter {
+        cj => cj.getAppName == appName && activeCoordStates.contains(cj.getStatus)
+      }.partition(_.getActions.exists(_.getStatus == CoordinatorAction.Status.RUNNING)) map idSeq
+
+    val toRm = for {
+      rm <- coodJobsToRm
+      rmr <- {
+        log.warn(s"Killing running coordinators $coodJobsToRmWithRunningActions with active stages")
+        coodJobsToRmWithRunningActions
+      } if killRunning
+    } yield rmr ++ rm
+
+    toRm.foreach(oc.client.kill)
+
   }
 
 }

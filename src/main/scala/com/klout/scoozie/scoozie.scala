@@ -10,13 +10,12 @@ import com.klout.scoozie.conversion.Conversion
 import com.klout.scoozie.dsl.Workflow
 import oozie.bundle.BUNDLEu45APP
 import oozie.coordinator.COORDINATORu45APP
-import shapeless.Lens
+import org.slf4j.LoggerFactory
 
 import scala.util.Try
 import scala.xml.NodeSeq
 import scalaxb.CanWriteXML
 import scalaxb.`package`._
-import scalaz.Lens
 
 object ScoozieConfig {
   val targetFolderName = "oozie"
@@ -28,6 +27,9 @@ object ScoozieConfig {
 }
 
 object Scoozie {
+
+  private val log = LoggerFactory.getLogger(getClass)
+
   def apply[T: CanWriteXML, K](workflow: Workflow[T, K], postProcessing: Option[XmlPostProcessing]): String = {
     val wf = Conversion(workflow)
     generateXml(wf, workflow.scope, workflow.namespace, workflow.elementLabel, postProcessing)
@@ -55,7 +57,7 @@ object Scoozie {
   def writeWorkflow[T: CanWriteXML, K](rootFolder: String,
                                        workflow: Workflow[T, K],
                                        properties: Map[String, String],
-                                       fileSystemUtils: FileSystemUtils = LocalFileSystemUtils): Try[Unit] = {
+                                       fileSystemUtils: FileSystemUtils = LocalFileSystemUtils): Try[String] = {
 
     import utils.PropertyImplicits._
 
@@ -63,7 +65,7 @@ object Scoozie {
     import pathBuilder._
     import ScoozieConfig._
 
-    val workflowFilename = withXmlExtension(workflow.name)
+    val workflowFilename = getWorkflowFileName(workflow)
 
     val updatedProperties = properties ++ Map(
       ScoozieConfig.rootFolderParameterName -> rootFolder,
@@ -72,12 +74,15 @@ object Scoozie {
           s"/$targetFolderName/$workflowFolderName/$workflowFilename")
     )
 
+    val wfFilePath = getWorkflowFilePath(workflowFilename)
+    log.info(s"writing workflow {$workflow} to '$wfFilePath'")
+
     for {
       _ <- fileSystemUtils.makeDirectory(getTargetFolderPath)
       _ <- fileSystemUtils.makeDirectory(getWorkflowFolderPath)
       _ <- fileSystemUtils.writeTextFile(getPropertiesFilePath, updatedProperties.toProperties.toWritableString)
-      _ <- fileSystemUtils.writeTextFile(getWorkflowFilePath(workflowFilename), Scoozie(workflow))
-    } yield ()
+      _ <- fileSystemUtils.writeTextFile(wfFilePath, Scoozie(workflow))
+    } yield wfFilePath
   }
 
   def writeCoordinator[T: CanWriteXML, K](rootFolder: String,
@@ -85,7 +90,7 @@ object Scoozie {
                                           workflow: Workflow[T, K],
                                           properties: Map[String, String],
                                           fileSystemUtils: FileSystemUtils = LocalFileSystemUtils,
-                                          rewriteCoordinatorWorkflowPath: Boolean = true): Try[Unit] = {
+                                          rewriteCoordinatorWorkflowPath: Boolean = true): Try[String] = {
 
     import utils.PropertyImplicits._
 
@@ -93,12 +98,7 @@ object Scoozie {
     import pathBuilder._
     import ScoozieConfig._
 
-    val workflowName = getWorkflowName(workflow)
-    val workflowPath = getWorkflowFilePath(workflowName)
-
-    //Update the workflow path
-    val coord = if (rewriteCoordinatorWorkflowPath) Lenses.coordWorkflowPathLens.set(coordinator)(workflowPath) else coordinator
-    val coordinatorFileName = getCoordinatorName(coordinator)
+    val coordinatorFileName = getCoordinatorFileName(coordinator)
 
     val updatedProperties = properties ++ Map(
       ScoozieConfig.rootFolderParameterName -> rootFolder,
@@ -106,14 +106,26 @@ object Scoozie {
         s"/$targetFolderName/$coordinatorFolderName/$coordinatorFileName")
     )
 
+    val coordinatorFilePath = getCoordinatorFilePath(coordinatorFileName)
+    log.info(s"writing coordinator to '$coordinatorFilePath'")
+
+    //Update the workflow paths in the coordinator
+    def updateCoordinatorPath(workflowPath: String): Try[COORDINATORu45APP] = {
+      Try(
+        if (rewriteCoordinatorWorkflowPath) Lenses.coordWorkflowPathLens.set(coordinator)(workflowPath)
+        else coordinator
+      )
+    }
+
     for {
       _ <- fileSystemUtils.makeDirectory(getTargetFolderPath)
       _ <- fileSystemUtils.makeDirectory(getWorkflowFolderPath)
       _ <- fileSystemUtils.makeDirectory(getCoordinatorFolderPath)
       _ <- fileSystemUtils.writeTextFile(getPropertiesFilePath, updatedProperties.toProperties.toWritableString)
-      _ <- fileSystemUtils.writeTextFile(getCoordinatorFilePath(coordinatorFileName), Scoozie(coord))
-      _ <- fileSystemUtils.writeTextFile(workflowPath, Scoozie(workflow))
-    } yield ()
+      wfPath <- writeWorkflow(rootFolder = rootFolder, workflow = workflow, properties = properties, fileSystemUtils = fileSystemUtils)
+      coord <- updateCoordinatorPath(wfPath)
+      _ <- fileSystemUtils.writeTextFile(coordinatorFilePath, Scoozie(coord))
+    } yield coordinatorFilePath
   }
 
   def writeBundle[T: CanWriteXML, K](rootFolder: String,
@@ -121,7 +133,7 @@ object Scoozie {
                                      coordinatorWorkflows: Map[COORDINATORu45APP, Workflow[T, K]],
                                      properties: Map[String, String],
                                      fileSystemUtils: FileSystemUtils = LocalFileSystemUtils,
-                                     rewriteWorkflowPaths: Boolean = true): Try[Unit] = {
+                                     rewriteWorkflowPaths: Boolean = true): Try[String] = {
 
     import utils.PropertyImplicits._
 
@@ -129,12 +141,11 @@ object Scoozie {
     import pathBuilder._
     import ScoozieConfig._
 
-    val bndl = if (rewriteWorkflowPaths) coordinatorWorkflows.foldLeft (bundle) {
-      case (b, (coord, wf)) => Lenses.rewritePath(coord.name).set(b, getCoordinatorFilePath(coord.name)).get
-    }
-    else bundle
+    type CoordinatorName = String
+    type CoordinatorFilePath = String
 
-    val bundleFileName = getBundleFileName(bndl)
+    val bundleFileName = getBundleFileName(bundle)
+    val bundleFilePath = getBundleFilePath(bundleFileName)
 
     val updatedProperties = properties ++ Map(
       ScoozieConfig.rootFolderParameterName -> rootFolder,
@@ -144,24 +155,40 @@ object Scoozie {
 
     import com.klout.scoozie.utils.SeqImplicits._
 
-    def writeCoordinators() = {
+    def writeCoordinators(): Try[Seq[(String, String)]] = {
       for {
         _ <- fileSystemUtils.makeDirectory(getCoordinatorFolderPath)
-        _ <- sequenceTry(coordinatorWorkflows.map{
+        coordPaths <- sequenceTry(coordinatorWorkflows.map {
           case (coordinator, workflow) =>
-            Try(writeCoordinator(rootFolder = rootFolder, workflow = workflow, coordinator = coordinator,
-              properties = properties, fileSystemUtils = fileSystemUtils, rewriteCoordinatorWorkflowPath = rewriteWorkflowPaths))
+            writeCoordinator(rootFolder = rootFolder, workflow = workflow, coordinator = coordinator,
+              properties = properties, fileSystemUtils = fileSystemUtils, rewriteCoordinatorWorkflowPath = rewriteWorkflowPaths).map{
+                s => coordinator.name -> s
+              }
         })
-      } yield ()
+      } yield coordPaths.toSeq
     }
 
-    for {
+    def updateBundlePaths(coordPathPairs: Seq[(CoordinatorName, CoordinatorFilePath)]) = {
+      Try(
+        if (rewriteWorkflowPaths) coordPathPairs.foldLeft (bundle) {
+          case (b, (coordName, coordPath)) => Lenses.rewritePath(coordName).set(b, coordPath).get
+        }
+        else bundle
+      )
+    }
+
+    val writtenBndl = for {
       _ <- fileSystemUtils.makeDirectory(getTargetFolderPath)
       _ <- fileSystemUtils.makeDirectory(getBundleFolderPath)
       _ <- fileSystemUtils.writeTextFile(getPropertiesFilePath, updatedProperties.toProperties.toWritableString)
-      _ <- fileSystemUtils.writeTextFile(getBundleFilePath(bundleFileName), Scoozie(bndl))
-      _ <- writeCoordinators() if coordinatorWorkflows.nonEmpty
-    } yield ()
+      coordPathPairs <- writeCoordinators() if coordinatorWorkflows.nonEmpty
+      bndl <- updateBundlePaths(coordPathPairs)
+      _ <- fileSystemUtils.writeTextFile(bundleFilePath, Scoozie(bndl))
+    } yield bndl
+
+    log.info(s"wrote bundle {$writtenBndl} to '$bundleFilePath'")
+
+    writtenBndl.map(_ => bundleFilePath)
   }
 
   def generateXml[A: CanWriteXML](xmlObject: A,
@@ -260,9 +287,9 @@ class PathBuilder(rootFolderPath: String) {
 
   def withXmlExtension(name: String): String = s"$name.xml"
 
-  def getWorkflowName(workflow: Workflow[_, _]) = s"workflow_${withXmlExtension(workflow.name)}"
+  def getWorkflowFileName(workflow: Workflow[_, _]) = s"workflow_${withXmlExtension(workflow.name)}"
 
-  def getCoordinatorName(coordinator: COORDINATORu45APP) = s"coordinator_${withXmlExtension(coordinator.name)}"
+  def getCoordinatorFileName(coordinator: COORDINATORu45APP) = s"coordinator_${withXmlExtension(coordinator.name)}"
 
   def getBundleFileName(bndl: BUNDLEu45APP) = s"bundle_${withXmlExtension(bndl.name)}"
 }

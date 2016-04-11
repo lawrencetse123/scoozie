@@ -4,7 +4,7 @@
 
 package com.klout.scoozie.examples
 
-import oozie.workflow._
+import oozie.workflow_0_5._
 import scalaxb._
 
 /* 

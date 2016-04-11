@@ -8,7 +8,6 @@ import com.klout.scoozie.conversion._
 import com.klout.scoozie.dsl._
 import com.klout.scoozie.examples.SimpleSamples._
 import com.klout.scoozie.jobs.NoOpJob
-import com.klout.scoozie.workflow.WorkflowImpl
 import org.specs2.mutable._
 
 class VerificationSpec extends Specification {
@@ -160,7 +159,7 @@ class VerificationSpec extends Specification {
                     "foo" -> Predicates.BooleanProperty("bar")
                 ) dependsOn Start
                 val end = End dependsOn OneOf(first default, first option "foo")
-                WorkflowImpl("complex-decisions", end)
+                Workflow("complex-decisions", end)
             }
             Verification.verifyDecisions(Flatten(complexDecisions).values.toSet) must beTrue
         }
@@ -172,7 +171,7 @@ class VerificationSpec extends Specification {
                 ) dependsOn Start
                 val foo = NoOpJob("foo2") dependsOn OneOf(first default, first option "foo")
                 val end = End dependsOn foo
-                WorkflowImpl("complex-decisions", end)
+                Workflow("complex-decisions", end)
             }
             Verification.verifyDecisions(Flatten(ComplexDecision).values.toSet) must beTrue
         }
@@ -184,7 +183,7 @@ class VerificationSpec extends Specification {
                 ) dependsOn Start
                 val foo = NoOpJob("foo") dependsOn (first option "foo")
                 val end = End dependsOn OneOf(foo, first default)
-                WorkflowImpl("complex-decisions", end)
+                Workflow("complex-decisions", end)
             }
             Verification.verifyDecisions(Flatten(decision).values.toSet) must beTrue
 
@@ -194,7 +193,7 @@ class VerificationSpec extends Specification {
                 ) dependsOn Start
                 val foo = NoOpJob("foo") dependsOn (first default)
                 val end = End dependsOn OneOf(foo, first option "foo")
-                WorkflowImpl("complex-decisions", end)
+                Workflow("complex-decisions", end)
             }
             Verification.verifyDecisions(Flatten(decision2).values.toSet) must beTrue
         }
@@ -205,7 +204,7 @@ class VerificationSpec extends Specification {
         val first = NoOpJob("first") dependsOn Start
         val second = NoOpJob("second") dependsOn Start
         val end = End dependsOn (first, second)
-        WorkflowImpl("simple-fj", end)
+        Workflow("simple-fj", end)
     }
 
     def SimpleDecisionForkJoin = {
@@ -219,7 +218,7 @@ class VerificationSpec extends Specification {
         val second1 = NoOpJob("second1") dependsOn OneOf(default1, option1)
         val second2 = NoOpJob("second2") dependsOn OneOf(default2, option2)
         val done = End dependsOn (second1, second2)
-        WorkflowImpl("simple-decision", done)
+        Workflow("simple-decision", done)
     }
 
     def OozieNotAllowed = {
@@ -233,7 +232,7 @@ class VerificationSpec extends Specification {
         val fourthB = NoOpJob("fourthB") dependsOn (thirdB, thirdC)
         val fifth = NoOpJob("fifth") dependsOn (fourthA, fourthB)
         val end = End dependsOn fifth
-        WorkflowImpl("not-allowed", end)
+        Workflow("not-allowed", end)
     }
 
     def OozieNotAllowed2 = {
@@ -245,7 +244,7 @@ class VerificationSpec extends Specification {
         val thirdC = NoOpJob("thirdC") dependsOn secondB
         val fourth = NoOpJob("fourth") dependsOn (thirdA, thirdB, thirdC)
         val end = End dependsOn fourth
-        WorkflowImpl("not-allowed-2", end)
+        Workflow("not-allowed-2", end)
     }
 
     def OozieNotAllowed3 = {
@@ -261,7 +260,7 @@ class VerificationSpec extends Specification {
         val thirdD = NoOpJob("thirdD") dependsOn secondB
         //join
         val end = End dependsOn (thirdA, thirdB, thirdC, thirdD)
-        WorkflowImpl("not-allowed-3", end)
+        Workflow("not-allowed-3", end)
     }
 
     def OozieNotAllowed4 = {
@@ -272,7 +271,7 @@ class VerificationSpec extends Specification {
         val thirdB = NoOpJob("thirdB") dependsOn secondA
         val fourth = NoOpJob("fourth") dependsOn (thirdB, secondB)
         val end = End dependsOn (thirdA, fourth)
-        WorkflowImpl("not-allowed-4", end)
+        Workflow("not-allowed-4", end)
     }
 
     def simpleValidDecision = {
@@ -281,7 +280,7 @@ class VerificationSpec extends Specification {
         val default = NoOpJob("default") dependsOn (dec default)
         val option = NoOpJob("option") dependsOn (dec option "route1")
         val second = NoOpJob("second") dependsOn OneOf(default, option)
-        WorkflowImpl("simple-valid-decision", second)
+        Workflow("simple-valid-decision", second)
     }
 
     def simpleInvalidDecision = {
@@ -289,7 +288,7 @@ class VerificationSpec extends Specification {
         val dec = Decision("route1" -> Predicates.AlwaysTrue) dependsOn first
         val option = NoOpJob("option") dependsOn (dec option "route1")
         val second = NoOpJob("second") dependsOn option
-        WorkflowImpl("simple-valid-decision", second)
+        Workflow("simple-valid-decision", second)
     }
 
     def simpleInvalidDecision2 = {
@@ -297,6 +296,6 @@ class VerificationSpec extends Specification {
         val dec = Decision("route1" -> Predicates.AlwaysTrue) dependsOn first
         val default = NoOpJob("default") dependsOn (dec default)
         val second = NoOpJob("second") dependsOn default
-        WorkflowImpl("simple-valid-decision2", second)
+        Workflow("simple-valid-decision2", second)
     }
 }

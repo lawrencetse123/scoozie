@@ -8,7 +8,9 @@ import com.google.common.base._
 import com.klout.scoozie.dsl.Predicate
 import com.klout.scoozie.dsl.Predicates
 import com.klout.scoozie.dsl._
+import com.klout.scoozie.utils.WriterUtils
 import com.klout.scoozie.verification.Verification
+import org.joda.time.{ DateTimeZone, DateTime }
 import scalaxb._
 
 case class PartiallyOrderedNode(node: GraphNode,
@@ -153,7 +155,7 @@ case object WorkflowJoin extends WorkflowOption
 case object WorkflowEnd extends WorkflowOption
 
 object Conversion {
-    def apply[T, K](workflow: Workflow[T, K]) = {
+    def apply[T](workflow: Workflow[T]): T = {
         val flattenedNodes = Flatten(workflow).values.toSet
         val finalGraph = Verification.verify(flattenedNodes)
         val orderedNodes = order(RefSet(finalGraph.toSeq)).toList sortWith PartiallyOrderedNode.lt map (_.node)
@@ -167,6 +169,38 @@ object Conversion {
 
         workflow.buildWorkflow(startTo, "end", actions)
     }
+
+    def apply[T](coordinator: Coordinator[T, _]): T = {
+        import com.klout.scoozie.utils.WriterUtils
+
+        coordinator.buildCoordinator(
+            start = toOozieDateTime(coordinator.start.withZone(coordinator.timezone)),
+            end = toOozieDateTime(coordinator.end.withZone(coordinator.timezone)),
+            frequency = coordinator.frequency.toString,
+            timezone = coordinator.timezone.toString,
+            workflowPath = coordinator.workflowPath.getOrElse(s"$${${WriterUtils.buildPathPropertyName(coordinator.workflow.name)}}")
+        )
+    }
+
+    def apply[B, C, W](bundle: Bundle[B, C, W]): B = {
+        bundle.buildBundle(
+            name = bundle.name,
+            kickoffTime = bundle.kickoffTime match {
+                case Left(dateTime) => toOozieDateTime(dateTime)
+                case Right(string)  => string
+            },
+            coordinatorDescriptor = bundle.coordinators.map(descriptor => {
+                bundle.buildCoordinator(
+                    name = descriptor.name,
+                    path = descriptor.path.getOrElse(
+                        s"$${${WriterUtils.buildPathPropertyName(descriptor.coordinator.name)}}"),
+                    configuration = descriptor.configuration
+                )
+            })
+        )
+    }
+
+    def toOozieDateTime(dateTime: DateTime) = dateTime.toLocalDateTime.toDateTime(DateTimeZone.UTC).toString("yyyy-MM-dd'T'HH:mm'Z'")
 
     def convertPredicate(pred: Predicate): String = {
         pred match {

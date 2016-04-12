@@ -1,8 +1,7 @@
 package com.klout.scoozie.dsl
 
-import com.klout.scoozie.jobs.`package`._
 import com.klout.scoozie.utils.CronConverter.{ CronSubExpr, DayOfMonth, DayOfWeek, Hour, Minute, Month }
-import oozie.coordinator_0_5._
+import oozie.coordinator_0_4._
 import org.joda.time.{ DateTime, DateTimeZone }
 
 trait Coordinator[C, W] extends WritableApplication {
@@ -34,9 +33,8 @@ object Coordinator {
                  controls: Option[CONTROLS] = None,
                  datasets: Option[DATASETS] = None,
                  inputEvents: Option[INPUTEVENTS] = None,
-                 inputLogic: Option[INPUTLOGIC] = None,
                  outputEvents: Option[OUTPUTEVENTS] = None) =
-        v0_5(
+        v0_4(
             name,
             workflow,
             start,
@@ -49,10 +47,9 @@ object Coordinator {
             controls,
             datasets,
             inputEvents,
-            inputLogic,
             outputEvents)
 
-    def v0_5[W](name: String,
+    def v0_4[W](name: String,
                 workflow: Workflow[W],
                 start: DateTime,
                 end: DateTime,
@@ -64,7 +61,6 @@ object Coordinator {
                 controls: Option[CONTROLS] = None,
                 datasets: Option[DATASETS] = None,
                 inputEvents: Option[INPUTEVENTS] = None,
-                inputLogic: Option[INPUTLOGIC] = None,
                 outputEvents: Option[OUTPUTEVENTS] = None): Coordinator[COORDINATORu45APP, W] = {
 
         val _name = name
@@ -100,7 +96,7 @@ object Coordinator {
 
             override val namespace: String = "coordinator"
             override val elementLabel: String = "coordinator-app"
-            override val scope: String = "uri:oozie:coordinator:0.5"
+            override val scope: String = "uri:oozie:coordinator:0.4"
 
             override def buildCoordinator(start: String,
                                           end: String,
@@ -121,7 +117,6 @@ object Coordinator {
                     controls = controls,
                     datasets = datasets,
                     inputu45events = inputEvents,
-                    inputu45logic = inputLogic,
                     outputu45events = outputEvents
                 )
             }

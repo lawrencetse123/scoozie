@@ -5,8 +5,9 @@
 package com.klout.scoozie.conversion
 
 import com.klout.scoozie.dsl._
-import com.klout.scoozie.jobs.NoOpJob
 import org.specs2.mutable._
+
+import scalaxb.DataRecord
 
 class FlattenSpec extends Specification {
     "Flatten" should {
@@ -726,4 +727,10 @@ class FlattenSpec extends Specification {
         val end = End dependsOn first
         Workflow("disallowed-names", end)
     }
+}
+
+case class NoOpJob(name: String) extends Job[String] {
+    import oozie._
+    override val jobName = name
+    override val record = DataRecord("")
 }

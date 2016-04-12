@@ -5,7 +5,10 @@
 package com.klout.scoozie.examples
 
 import com.klout.scoozie.dsl._
-import com.klout.scoozie.jobs.{ MkDir, FsJob, MapReduceJob, NoOpJob }
+import com.klout.scoozie.jobs.MapReduceJob
+import oozie.workflow_0_5.FS
+
+import scalaxb.DataRecord
 
 object DecisionSamples {
 
@@ -22,16 +25,16 @@ object DecisionSamples {
     val Pipeline = Workflow("decisions", Done)
 
     def newDecisionSample = {
-        val first = NoOpJob("first") dependsOn Start
-        val optionalNode = NoOpJob("optional") dependsOn first doIf "${doOptionalNode}"
-        val alwaysDo = NoOpJob("always do") dependsOn Optional(optionalNode)
+        val first = MapReduceJob("first") dependsOn Start
+        val optionalNode = MapReduceJob("optional") dependsOn first doIf "${doOptionalNode}"
+        val alwaysDo = MapReduceJob("always do") dependsOn Optional(optionalNode)
         val optionalNode2 = {
-            val sub1 = NoOpJob("sub1") dependsOn Start
-            val sub2 = NoOpJob("sub2") dependsOn sub1
-            val sub3 = NoOpJob("sub3") dependsOn sub2
+            val sub1 = MapReduceJob("sub1") dependsOn Start
+            val sub2 = MapReduceJob("sub2") dependsOn sub1
+            val sub3 = MapReduceJob("sub3") dependsOn sub2
             Workflow("sub-wf", sub3)
         } dependsOn alwaysDo doIf "{doSubWf}"
-        val alwaysDo2 = NoOpJob("always do 2") dependsOn Optional(optionalNode2)
+        val alwaysDo2 = MapReduceJob("always do 2") dependsOn Optional(optionalNode2)
         val end = End dependsOn alwaysDo2
         Workflow("new-decision", end)
     }
@@ -339,3 +342,24 @@ object SimpleSamples {
         Workflow("decision-example", done)
     }
 }
+
+// Node: There is a limitation with the way scalaxb creates the FS Task
+// case classes from workflow.xsd: It treats the different task types as
+// separate sequences so ordering among the types is not possible.
+// Need to address later.
+case class FsJob(name: String, tasks: List[FsTask]) extends Job[FS] {
+    override val jobName = s"fs_$name"
+    override val record = DataRecord(None, Some("fs"), FS())
+}
+
+sealed trait FsTask
+
+case class MkDir(path: String) extends FsTask
+
+case class Mv(from: String, to: String) extends FsTask
+
+case class Rm(path: String) extends FsTask
+
+case class Touchz(path: String) extends FsTask
+
+case class ChMod(path: String, permissions: String, dirFiles: String) extends FsTask

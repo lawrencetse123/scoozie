@@ -58,20 +58,20 @@ contentsSizeLimit in (Compile, scalaxb) := 20
 
 namedAttributes in(Compile, scalaxb) := true
 
-val workflowRoot = "oozie.workflow_0_5"
+val rootFolder = "oozie"
 
 packageNames in scalaxb in Compile := Map(
-  uri("uri:oozie:workflow:0.5") -> workflowRoot,
-  uri("uri:oozie:hive-action:0.6") -> s"$workflowRoot.hive",
-  uri("uri:oozie:shell-action:0.3") -> s"$workflowRoot.shell",
-  uri("uri:oozie:distcp-action:0.2") -> s"$workflowRoot.distcp",
-  uri("uri:oozie:email-action:0.2") -> s"$workflowRoot.email",
-  uri("uri:oozie:sla:0.2") -> s"$workflowRoot.sla",
-  uri("uri:oozie:spark-action:0.1") -> s"$workflowRoot.spark",
-  uri("uri:oozie:sqoop-action:0.4") -> s"$workflowRoot.sqoop",
-  uri("uri:oozie:ssh-action:0.2") -> s"$workflowRoot.ssh",
-  uri("uri:oozie:coordinator:0.5") -> s"oozie.coordinator_0_5",
-  uri("uri:oozie:bundle:0.2") -> s"oozie.bundle_0_2"
+  uri("uri:oozie:workflow:0.5") -> s"$rootFolder.workflow_0_5",
+  uri("uri:oozie:hive-action:0.5") -> s"$rootFolder.hive_0_5",
+  uri("uri:oozie:shell-action:0.3") -> s"$rootFolder.shell_0_3",
+  uri("uri:oozie:distcp-action:0.2") -> s"$rootFolder.distcp_0_2",
+  uri("uri:oozie:email-action:0.2") -> s"$rootFolder.email_0_2",
+  uri("uri:oozie:sla:0.2") -> s"$rootFolder.sla_0_2",
+  uri("uri:oozie:spark-action:0.1") -> s"$rootFolder.spark_0_1",
+  uri("uri:oozie:sqoop-action:0.4") -> s"$rootFolder.sqoop_0_4",
+  uri("uri:oozie:ssh-action:0.2") -> s"$rootFolder.ssh_0_2",
+  uri("uri:oozie:coordinator:0.4") -> s"$rootFolder.coordinator_0_4",
+  uri("uri:oozie:bundle:0.2") -> s"$rootFolder.bundle_0_2"
 )
 
 scalacOptions ++= Seq(

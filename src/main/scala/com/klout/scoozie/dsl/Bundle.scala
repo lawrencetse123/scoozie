@@ -1,6 +1,5 @@
 package com.klout.scoozie.dsl
 
-import com.klout.scoozie.jobs.`package`._
 import oozie.bundle_0_2._
 import org.joda.time.DateTime
 
@@ -12,7 +11,8 @@ trait Bundle[B, C, W] extends WritableApplication {
     val coordinators: List[CoordinatorDescriptor[C, W]]
 
     def buildCoordinator(name: String, configuration: ConfigurationList, path: String): Coordinator
-    def buildBundle(name: String, kickoffTime: String, coordinatorDescriptor: Seq[Coordinator]): B
+
+    def buildBundle(name: String, kickoffTime: String, coordinatorDescriptors: Seq[Coordinator]): B
 }
 
 case class CoordinatorDescriptor[C, W](name: String,

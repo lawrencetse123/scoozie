@@ -4,8 +4,6 @@
 
 package com.klout.scoozie.dsl
 
-import com.klout.scoozie.jobs.`package`._
-
 import scalaxb._
 
 sealed trait Work {
@@ -168,7 +166,7 @@ object Workflow {
               parameters: ParameterList = Nil,
               global: Option[oozie.workflow_0_5.GLOBAL] = None,
               credentials: Option[oozie.workflow_0_5.CREDENTIALS] = None,
-              any: Option[oozie.workflow_0_5.sla.SLAu45INFO] = None): Workflow[oozie.workflow_0_5.WORKFLOWu45APP] =
+              any: Option[oozie.sla_0_2.SLAu45INFO] = None): Workflow[oozie.workflow_0_5.WORKFLOWu45APP] =
         v0_5(name, end, parameters, global, credentials, any)
 
     def v0_5(name: String,
@@ -176,7 +174,7 @@ object Workflow {
              parameters: ParameterList = Nil,
              global: Option[oozie.workflow_0_5.GLOBAL] = None,
              credentials: Option[oozie.workflow_0_5.CREDENTIALS] = None,
-             any: Option[oozie.workflow_0_5.sla.SLAu45INFO] = None): Workflow[oozie.workflow_0_5.WORKFLOWu45APP] = {
+             any: Option[oozie.sla_0_2.SLAu45INFO] = None): Workflow[oozie.workflow_0_5.WORKFLOWu45APP] = {
 
         import oozie.workflow_0_5._
 
@@ -235,14 +233,14 @@ object Workflow {
 
             override val actionBuilder = actionBuilderImpl
 
-            override def buildWorkflow(start: String, end: String, action: Seq[DataRecord[ActionOption]]) = {
+            override def buildWorkflow(start: String, end: String, actions: Seq[DataRecord[ActionOption]]) = {
                 WORKFLOWu45APP(name = name,
                     start = START(start),
                     end = END(end),
                     parameters = parameterBuilderImpl(parameters),
                     global = global,
                     credentials = credentials,
-                    workflowu45appoption = action,
+                    workflowu45appoption = actions,
                     any = any.map(DataRecord(None, Some("sla"), _))
                 )
             }

@@ -5,10 +5,10 @@
 package com.klout.scoozie.conversion
 
 import com.klout.scoozie.dsl._
-import com.klout.scoozie.jobs.{JavaJob, MapReduceJob}
+import com.klout.scoozie.jobs.{ MapReduceJob, JavaJob }
 import com.klout.scoozie.writer.implicits._
 import oozie._
-import org.joda.time.{DateTime, DateTimeZone}
+import org.joda.time.{ DateTime, DateTimeZone }
 import org.specs2.mutable._
 
 import scalaxb._
@@ -77,11 +77,11 @@ class XMLGenerationSpec extends Specification {
                                    |    </coordinator>
                                    |</bundle-app>""".stripMargin
 
-            bundle.toXml must_== expectedResult
+            bundle.toXml() must_== expectedResult
         }
 
         "be able to successfully generate a coordinator" in {
-            import oozie.coordinator_0_5._
+            import oozie.coordinator_0_4._
 
             val coordinator = Coordinator(
                 parameters = Nil,
@@ -109,17 +109,16 @@ class XMLGenerationSpec extends Specification {
                             doneu45flag = None))
                     ))))),
                 inputEvents = Some(INPUTEVENTS(Seq(
-                    DataRecord(None, Some("data-in"), DATAIN(
+                    DATAIN(
                         name = "input",
                         dataset = "din",
                         datainoption = Seq(DataRecord(None, Some("instance"), "${coord:current(0)}"))
-                    ))))),
+                    )))),
                 outputEvents = Some(OUTPUTEVENTS(Seq(DATAOUT(
                     name = "output",
                     dataset = "dout",
                     instance = "${coord:current(1)}"
                 )))),
-                inputLogic = None,
                 workflowPath = Some("${wf_app_path}"),
                 configuration = List(
                     "wfInput" -> "${coord:dataIn('input')}",
@@ -174,11 +173,11 @@ class XMLGenerationSpec extends Specification {
                                    |    </action>
                                    |</coordinator-app>""".stripMargin
 
-            coordinator.toXml must_== expectedResult
+            coordinator.toXml() must_== expectedResult
         }
 
         "given a user created job it should generate the correct workflow" in {
-            import oozie.workflow_0_5.shell.ACTION
+            import oozie.shell_0_3._
 
             case class MyShell(jobName: String = "shell-test") extends Job[ACTION] {
                 override val record: DataRecord[ACTION] = DataRecord(None, Some("shell"), ACTION(
@@ -216,33 +215,38 @@ class XMLGenerationSpec extends Specification {
                   |    <end name="end"/>
                   |</workflow-app>""".stripMargin
 
-            workflow.toXml must_== expectedResult
+            workflow.toXml() must_== expectedResult
         }
 
         "give workflow with double quotes rather than &quot;" in {
-            val firstJob = MapReduceJob("first") dependsOn Start
+            val firstJob = MapReduceJob("mr_first", Some("${nameNode}"), Some("${jobTracker}")) dependsOn Start
             val jsonJob = JavaJob(
+                jobName = "java_class",
                 mainClass = "test.class",
                 configuration = List(
                     "testJson" -> """{ "foo" : "bar" }"""
-                )
+                ),
+                nameNode = Some("${nameNode}"),
+                jobTracker = Some("${jobTracker}")
             ) dependsOn firstJob
             val end = End dependsOn jsonJob
             val workflow = Workflow("test-post-processing", end)
 
-
             workflow.write("/home/roman/projects/scoozie-working/scoozie-public/scoozie/src/test/resources/writer-tests/bundle-write-test/bundle.xml")
-            workflow.toXml must_== postProcessedXml
+            workflow.toXml() must_== postProcessedXml
         }
     }
 
     val workflow = {
-        val firstJob = MapReduceJob("first") dependsOn Start
+        val firstJob = MapReduceJob("mr_first") dependsOn Start
         val jsonJob = JavaJob(
+            jobName = "java_class",
             mainClass = "test.class",
             configuration = List(
                 "testJson" -> """{ "foo" : "bar" }"""
-            )
+            ),
+            nameNode = Some("maprfs:///"),
+            jobTracker = Some("maprfs:///")
         ) dependsOn firstJob
         val end = End dependsOn jsonJob
 

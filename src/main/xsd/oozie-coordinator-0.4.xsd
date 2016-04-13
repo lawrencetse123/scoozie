@@ -16,8 +16,8 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:coordinator="uri:oozie:coordinator:0.5"
-           elementFormDefault="qualified" targetNamespace="uri:oozie:coordinator:0.5">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:coordinator="uri:oozie:coordinator:0.4"
+           elementFormDefault="qualified" targetNamespace="uri:oozie:coordinator:0.4">
 
     <xs:element name="coordinator-app" type="coordinator:COORDINATOR-APP"/>
     <xs:element name="datasets" type="coordinator:DATASETS"/>
@@ -32,7 +32,6 @@
             <xs:element name="controls" type="coordinator:CONTROLS" minOccurs="0" maxOccurs="1"/>
             <xs:element name="datasets" type="coordinator:DATASETS" minOccurs="0" maxOccurs="1"/>
             <xs:element name="input-events" type="coordinator:INPUTEVENTS" minOccurs="0" maxOccurs="1"/>
-            <xs:element name="input-logic" type="coordinator:INPUTLOGIC" minOccurs="0" maxOccurs="1"/>
             <xs:element name="output-events" type="coordinator:OUTPUTEVENTS" minOccurs="0" maxOccurs="1"/>
             <xs:element name="action" type="coordinator:ACTION" minOccurs="1" maxOccurs="1"/>
         </xs:sequence>
@@ -91,55 +90,9 @@
         <xs:attribute name="initial-version" type="xs:string" use="required"/>
     </xs:complexType>
     <xs:complexType name="INPUTEVENTS">
-        <xs:choice minOccurs="1" maxOccurs="1">
-            <xs:element name="and" type="coordinator:LOGICALAND" minOccurs="0" maxOccurs="1"/>
-            <xs:element name="or" type="coordinator:LOGICALOR" minOccurs="0" maxOccurs="1"/>
+        <xs:sequence minOccurs="1" maxOccurs="1">
             <xs:element name="data-in" type="coordinator:DATAIN" minOccurs="1" maxOccurs="unbounded"/>
-        </xs:choice>
-    </xs:complexType>
-    <xs:complexType name="INPUTLOGIC">
-        <xs:choice minOccurs="0" maxOccurs="unbounded">
-            <xs:element name="and" type="coordinator:LOGICALAND" minOccurs="0" maxOccurs="unbounded"/>
-            <xs:element name="or" type="coordinator:LOGICALOR" minOccurs="0" maxOccurs="unbounded"/>
-            <xs:element name="combine" type="coordinator:COMBINE" minOccurs="0" maxOccurs="unbounded"/>
-            <xs:element name="data-in" type="coordinator:LOGICALDATAIN" minOccurs="1" maxOccurs="unbounded"/>
-        </xs:choice>
-    </xs:complexType>
-    <xs:complexType name="LOGICALAND">
-        <xs:choice minOccurs="0" maxOccurs="unbounded">
-            <xs:element name="and" type="coordinator:LOGICALAND" minOccurs="0" maxOccurs="unbounded"/>
-            <xs:element name="or" type="coordinator:LOGICALOR" minOccurs="0" maxOccurs="unbounded"/>
-            <xs:element name="data-in" type="coordinator:LOGICALDATAIN" minOccurs="1" maxOccurs="unbounded"/>
-            <xs:element name="combine" type="coordinator:COMBINE" minOccurs="0" maxOccurs="unbounded"/>
-        </xs:choice>
-        <xs:attribute name="name" type="xs:string" use="optional"/>
-        <xs:attribute name="min" type="xs:string" use="optional"/>
-        <xs:attribute name="wait" type="xs:string" use="optional"/>
-    </xs:complexType>
-    <xs:complexType name="LOGICALOR">
-        <xs:choice minOccurs="0" maxOccurs="unbounded">
-            <xs:element name="and" type="coordinator:LOGICALAND" minOccurs="0" maxOccurs="unbounded"/>
-            <xs:element name="or" type="coordinator:LOGICALOR" minOccurs="0" maxOccurs="unbounded"/>
-            <xs:element name="data-in" type="coordinator:LOGICALDATAIN" minOccurs="1" maxOccurs="unbounded"/>
-            <xs:element name="combine" type="coordinator:COMBINE" minOccurs="0" maxOccurs="unbounded"/>
-        </xs:choice>
-        <xs:attribute name="name" type="xs:string" use="optional"/>
-        <xs:attribute name="min" type="xs:string" use="optional"/>
-        <xs:attribute name="wait" type="xs:string" use="optional"/>
-    </xs:complexType>
-    <xs:complexType name="COMBINE">
-        <xs:choice minOccurs="0" maxOccurs="unbounded">
-            <xs:element name="data-in" type="coordinator:LOGICALDATAIN" minOccurs="2" maxOccurs="unbounded"/>
-        </xs:choice>
-        <xs:attribute name="name" type="xs:string" use="optional"/>
-        <xs:attribute name="min" type="xs:string" use="optional"/>
-        <xs:attribute name="wait" type="xs:string" use="optional"/>
-    </xs:complexType>
-    <xs:complexType name="LOGICALDATAIN">
-        <xs:attribute name="name" type="xs:string" use="optional"/>
-        <xs:attribute name="min" type="xs:string" use="optional"/>
-        <xs:attribute name="wait" type="xs:string" use="optional"/>
-        <xs:attribute name="dataset" type="xs:string" use="required"/>
+        </xs:sequence>
     </xs:complexType>
     <xs:complexType name="DATAIN">
         <xs:choice minOccurs="1" maxOccurs="1">
@@ -163,6 +116,7 @@
         </xs:sequence>
         <xs:attribute name="name" type="coordinator:IDENTIFIER" use="required"/>
         <xs:attribute name="dataset" type="xs:string" use="required"/>
+        <xs:attribute name="nocleanup" type="xs:boolean" use="optional"/>
     </xs:complexType>
     <xs:complexType name="ACTION">
         <xs:sequence minOccurs="1" maxOccurs="1">

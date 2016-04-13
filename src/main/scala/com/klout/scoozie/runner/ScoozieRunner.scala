@@ -164,9 +164,7 @@ abstract class ScoozieCoordinatorApp[T: CanWriteXML, W: CanWriteXML](coord: Coor
 
     import com.klout.scoozie.writer.implicits._
 
-    coord.write("/home/roman/projects/scoozie-working/scoozie-public/scoozie/src/test/resources/writer-tests/bundle-write-test")
-
-    val coordXML = coord.toXml
+    val coordXML = coord.toXml()
     println(coordXML)
 
     val coordPath = appPath(appType)

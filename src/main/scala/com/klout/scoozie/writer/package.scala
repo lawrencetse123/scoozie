@@ -10,19 +10,29 @@ import scalaxb.CanWriteXML
 
 package object implicits {
     trait CanWrite {
-        def toXml: String
-        def write(path: String, fileSystemUtils: FileSystemUtils = LocalFileSystemUtils): Try[Unit]
+        def toXml(xmlPostProcessing: XmlPostProcessing = XmlPostProcessing.Default): String
+
+        def write(path: String,
+                  fileSystemUtils: FileSystemUtils = LocalFileSystemUtils,
+                  xmlPostProcessing: XmlPostProcessing = XmlPostProcessing.Default): Try[Unit]
+
         def writeJob(path: String,
                      properties: Option[Map[String, String]] = None,
-                     fileSystemUtils: FileSystemUtils = LocalFileSystemUtils): Try[Unit]
+                     fileSystemUtils: FileSystemUtils = LocalFileSystemUtils,
+                     xmlPostProcessing: XmlPostProcessing = XmlPostProcessing.Default): Try[Unit]
     }
 
     implicit class WorkflowWriter[W: CanWriteXML](underlying: Workflow[W]) extends CanWrite {
-        override def write(path: String, fileSystemUtils: FileSystemUtils = LocalFileSystemUtils): Try[Unit] = {
-            fileSystemUtils.writeTextFile(path, underlying.toXmlString)
+        override def write(path: String,
+                           fileSystemUtils: FileSystemUtils = LocalFileSystemUtils,
+                           xmlPostProcessing: XmlPostProcessing = XmlPostProcessing.Default): Try[Unit] = {
+            fileSystemUtils.writeTextFile(path, underlying.toXmlString(xmlPostProcessing))
         }
 
-        override def writeJob(path: String, properties: Option[Map[String, String]] = None, fileSystemUtils: FileSystemUtils): Try[Unit] = {
+        override def writeJob(path: String,
+                              properties: Option[Map[String, String]] = None,
+                              fileSystemUtils: FileSystemUtils = LocalFileSystemUtils,
+                              xmlPostProcessing: XmlPostProcessing = XmlPostProcessing.Default): Try[Unit] = {
             val pathBuilder: PathBuilder = new PathBuilder(path)
 
             import pathBuilder._
@@ -39,21 +49,26 @@ package object implicits {
                 _ <- fileSystemUtils.makeDirectory(getTargetFolderPath)
                 _ <- fileSystemUtils.makeDirectory(getWorkflowFolderPath)
                 _ <- fileSystemUtils.writeTextFile(getPropertiesFilePath, propertiesString)
-                _ <- fileSystemUtils.writeTextFile(getWorkflowFilePath(workflowFilename), underlying.toXmlString)
+                _ <- fileSystemUtils.writeTextFile(getWorkflowFilePath(workflowFilename), underlying.toXmlString(xmlPostProcessing))
             } yield ()
         }
 
-        override def toXml = underlying.toXmlString
+        override def toXml(xmlPostProcessing: XmlPostProcessing = XmlPostProcessing.Default) = underlying.toXmlString(xmlPostProcessing)
     }
 
     implicit class CoordinatorWriter[C: CanWriteXML, W: CanWriteXML](underlying: Coordinator[C, W]) extends CanWrite {
-        override def write(path: String, fileSystemUtils: FileSystemUtils = LocalFileSystemUtils): Try[Unit] = {
+        override def write(path: String,
+                           fileSystemUtils: FileSystemUtils = LocalFileSystemUtils,
+                           xmlPostProcessing: XmlPostProcessing = XmlPostProcessing.Default): Try[Unit] = {
             assertPathIsDefined(underlying.workflowPath, "Workflow", underlying.workflow.name)
 
-            fileSystemUtils.writeTextFile(path, underlying.toXmlString)
+            fileSystemUtils.writeTextFile(path, underlying.toXmlString(xmlPostProcessing))
         }
 
-        override def writeJob(path: String, properties: Option[Map[String, String]] = None, fileSystemUtils: FileSystemUtils): Try[Unit] = {
+        override def writeJob(path: String,
+                              properties: Option[Map[String, String]] = None,
+                              fileSystemUtils: FileSystemUtils,
+                              xmlPostProcessing: XmlPostProcessing = XmlPostProcessing.Default): Try[Unit] = {
             assertPathIsEmpty(underlying.workflowPath, "Workflow", underlying.workflow.name)
 
             val pathBuilder: PathBuilder = new PathBuilder(path)
@@ -76,24 +91,32 @@ package object implicits {
                 _ <- fileSystemUtils.makeDirectory(getWorkflowFolderPath)
                 _ <- fileSystemUtils.makeDirectory(getCoordinatorFolderPath)
                 _ <- fileSystemUtils.writeTextFile(getPropertiesFilePath, propertiesString)
-                _ <- fileSystemUtils.writeTextFile(getCoordinatorFilePath(coordinatorFilename), underlying.toXmlString)
-                _ <- fileSystemUtils.writeTextFile(workflowPath, underlying.workflow.toXmlString)
+                _ <- fileSystemUtils.writeTextFile(
+                    getCoordinatorFilePath(coordinatorFilename),
+                    underlying.toXmlString(xmlPostProcessing))
+                _ <- fileSystemUtils.writeTextFile(workflowPath, underlying.workflow.toXmlString(xmlPostProcessing))
             } yield ()
         }
 
-        override def toXml = underlying.toXmlString
+        override def toXml(xmlPostProcessing: XmlPostProcessing = XmlPostProcessing.Default) =
+            underlying.toXmlString(xmlPostProcessing)
     }
 
     implicit class BundleWriter[B: CanWriteXML, C: CanWriteXML, W: CanWriteXML, A](underlying: Bundle[B, C, W]) extends CanWrite {
-        override def write(path: String, fileSystemUtils: FileSystemUtils = LocalFileSystemUtils): Try[Unit] = {
+        override def write(path: String,
+                           fileSystemUtils: FileSystemUtils = LocalFileSystemUtils,
+                           xmlPostProcessing: XmlPostProcessing = XmlPostProcessing.Default): Try[Unit] = {
             underlying.coordinators.foreach(descriptor => {
                 assertPathIsDefined(descriptor.path, "Coordinator", descriptor.coordinator.name)
             })
 
-            fileSystemUtils.writeTextFile(path, underlying.toXmlString)
+            fileSystemUtils.writeTextFile(path, underlying.toXmlString(xmlPostProcessing))
         }
 
-        override def writeJob(path: String, properties: Option[Map[String, String]] = None, fileSystemUtils: FileSystemUtils): Try[Unit] = {
+        override def writeJob(path: String,
+                              properties: Option[Map[String, String]] = None,
+                              fileSystemUtils: FileSystemUtils,
+                              xmlPostProcessing: XmlPostProcessing = XmlPostProcessing.Default): Try[Unit] = {
             underlying.coordinators.foreach(descriptor => {
                 assertPathIsEmpty(descriptor.path, "Coordinator", descriptor.coordinator.name)
                 assertPathIsEmpty(descriptor.coordinator.workflowPath, "Workflow", descriptor.coordinator.workflow.name)
@@ -125,7 +148,7 @@ package object implicits {
                         fileSystemUtils
                             .writeTextFile(
                                 getWorkflowFilePath(withXmlExtension(descriptor.coordinator.workflow.name)),
-                                descriptor.coordinator.workflow.toXml)))
+                                descriptor.coordinator.workflow.toXml(xmlPostProcessing))))
                 } yield ()
             }
 
@@ -136,7 +159,7 @@ package object implicits {
                         fileSystemUtils
                             .writeTextFile(
                                 getCoordinatorFilePath(withXmlExtension(descriptor.coordinator.name)),
-                                descriptor.coordinator.toXml)))
+                                descriptor.coordinator.toXml(xmlPostProcessing))))
                 } yield ()
             }
 
@@ -144,12 +167,12 @@ package object implicits {
                 _ <- fileSystemUtils.makeDirectory(getTargetFolderPath)
                 _ <- fileSystemUtils.makeDirectory(getBundleFolderPath)
                 _ <- fileSystemUtils.writeTextFile(getPropertiesFilePath, propertiesString)
-                _ <- fileSystemUtils.writeTextFile(getBundleFilePath(bundleFileName), underlying.toXml)
+                _ <- fileSystemUtils.writeTextFile(getBundleFilePath(bundleFileName), underlying.toXml(xmlPostProcessing))
                 _ <- writeCoordinators()
                 _ <- writeWorkflows()
             } yield ()
         }
 
-        override def toXml = underlying.toXmlString
+        override def toXml(xmlPostProcessing: XmlPostProcessing = XmlPostProcessing.Default) = underlying.toXmlString(xmlPostProcessing)
     }
 }

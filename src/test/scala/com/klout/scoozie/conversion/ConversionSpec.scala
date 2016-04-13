@@ -696,116 +696,125 @@ class ConversionSpec extends Specification {
 
     }
 
+    object TestMapReduceJob {
+        def apply(name: String) = {
+            MapReduceJob(
+                jobName = s"mr_$name",
+                nameNode = Some("${nameNode}"),
+                jobTracker = Some("${jobTracker}"))
+        }
+    }
+
     def EmptyWorkflow = {
         val end = End dependsOn Nil
         Workflow("empty", end)
     }
 
     def SingleWorkflow = {
-        val start = MapReduceJob("start") dependsOn Start
+        val start = TestMapReduceJob("start") dependsOn Start
         val end = End dependsOn start
         Workflow("single", end)
     }
 
     def SimpleWorkflow = {
-        val first = MapReduceJob("first") dependsOn Start
-        val second = MapReduceJob("second") dependsOn first
-        val third = MapReduceJob("third") dependsOn second
-        val fourth = MapReduceJob("fourth") dependsOn third
+        val first = TestMapReduceJob("first") dependsOn Start
+        val second = TestMapReduceJob("second") dependsOn first
+        val third = TestMapReduceJob("third") dependsOn second
+        val fourth = TestMapReduceJob("fourth") dependsOn third
         val end = End dependsOn fourth
         Workflow("simple", end)
     }
 
     def SimpleForkJoin = {
-        val first = MapReduceJob("first") dependsOn Start
-        val secondA = MapReduceJob("secondA") dependsOn first
-        val secondB = MapReduceJob("secondB") dependsOn first
+        val first = TestMapReduceJob("first") dependsOn Start
+        val secondA = TestMapReduceJob("secondA") dependsOn first
+        val secondB = TestMapReduceJob("secondB") dependsOn first
         val end = End dependsOn (secondA, secondB)
         Workflow("simple-fork-join", end)
     }
 
     def SimpleDecision = {
-        val first = MapReduceJob("first") dependsOn Start
+        val first = TestMapReduceJob("first") dependsOn Start
         val decision = Decision("route1" -> Predicates.AlwaysTrue) dependsOn first //decision is a DecisionNode
-        val default = MapReduceJob("default") dependsOn (decision default)
-        val option = MapReduceJob("option") dependsOn (decision option "route1")
-        val second = MapReduceJob("second") dependsOn OneOf(default, option)
+        val default = TestMapReduceJob("default") dependsOn (decision default)
+        val option = TestMapReduceJob("option") dependsOn (decision option "route1")
+        val second = TestMapReduceJob("second") dependsOn OneOf(default, option)
         val done = End dependsOn second
         Workflow("simple-decision", done)
     }
 
     def SimpleSubWorkflow = {
-        val first = MapReduceJob("begin") dependsOn Start
+        val first = TestMapReduceJob("begin") dependsOn Start
         val subWf = SimpleWorkflow dependsOn first
-        val third = MapReduceJob("final") dependsOn subWf
+        val third = TestMapReduceJob("final") dependsOn subWf
         val end = End dependsOn third
         Workflow("simple-sub-workflow", end)
     }
 
     def TwoSimpleForkJoins = {
-        val first = MapReduceJob("first") dependsOn Start
-        val secondA = MapReduceJob("secondA") dependsOn first
-        val secondB = MapReduceJob("secondB") dependsOn first
-        val third = MapReduceJob("third") dependsOn (secondA, secondB)
-        val fourthA = MapReduceJob("fourthA") dependsOn third
-        val fourthB = MapReduceJob("fourthB") dependsOn third
+        val first = TestMapReduceJob("first") dependsOn Start
+        val secondA = TestMapReduceJob("secondA") dependsOn first
+        val secondB = TestMapReduceJob("secondB") dependsOn first
+        val third = TestMapReduceJob("third") dependsOn (secondA, secondB)
+        val fourthA = TestMapReduceJob("fourthA") dependsOn third
+        val fourthB = TestMapReduceJob("fourthB") dependsOn third
         val end = End dependsOn (fourthA, fourthB)
         Workflow("two-simple-fork-joins", end)
     }
 
     def NestedForkJoin = {
-        val first = MapReduceJob("first") dependsOn Start
-        val secondA = MapReduceJob("secondA") dependsOn first
-        val secondB = MapReduceJob("secondB") dependsOn first
-        val thirdA = MapReduceJob("thirdA") dependsOn secondA
-        val thirdB = MapReduceJob("thirdB") dependsOn secondA
-        val thirdC = MapReduceJob("thirdC") dependsOn secondB
-        val fourth = MapReduceJob("fourth") dependsOn (thirdA, thirdB)
+        val first = TestMapReduceJob("first") dependsOn Start
+        val secondA = TestMapReduceJob("secondA") dependsOn first
+        val secondB = TestMapReduceJob("secondB") dependsOn first
+        val thirdA = TestMapReduceJob("thirdA") dependsOn secondA
+        val thirdB = TestMapReduceJob("thirdB") dependsOn secondA
+        val thirdC = TestMapReduceJob("thirdC") dependsOn secondB
+        val fourth = TestMapReduceJob("fourth") dependsOn (thirdA, thirdB)
         val end = End dependsOn (fourth, thirdC)
         Workflow("nested-fork-join", end)
     }
 
     def SubworkflowWithForkJoins = {
-        val start = MapReduceJob("start") dependsOn Start
+        val start = TestMapReduceJob("start") dependsOn Start
         val sub = SimpleWorkflow dependsOn start
-        val thirdA = MapReduceJob("thirdA") dependsOn sub
-        val thirdB = MapReduceJob("thirdB") dependsOn sub
+        val thirdA = TestMapReduceJob("thirdA") dependsOn sub
+        val thirdB = TestMapReduceJob("thirdB") dependsOn sub
         val end = End dependsOn (thirdA, thirdB)
         Workflow("sub-fork-join", end)
     }
 
     def DuplicateNodes = {
-        val first = MapReduceJob("first") dependsOn Start
-        val second = MapReduceJob("second") dependsOn first
-        val third = MapReduceJob("second") dependsOn first
+        val first = TestMapReduceJob("first") dependsOn Start
+        val second = TestMapReduceJob("second") dependsOn first
+        val third = TestMapReduceJob("second") dependsOn first
         val end = End dependsOn (second, third)
         Workflow("duplicate-nodes", end)
     }
 
     def SugarOption = {
-        val first = MapReduceJob("first") dependsOn Start
-        val option = MapReduceJob("option") dependsOn first doIf "${doOption}"
-        val second = MapReduceJob("second") dependsOn Optional(option)
+        val first = TestMapReduceJob("first") dependsOn Start
+        val option = TestMapReduceJob("option") dependsOn first doIf "${doOption}"
+        val second = TestMapReduceJob("second") dependsOn Optional(option)
         val done = End dependsOn second
         Workflow("sugar-option-decision", done)
     }
 
     def DecisionAndSugarOption = {
-        val first = MapReduceJob("first") dependsOn Start
+        val first = TestMapReduceJob("first") dependsOn Start
         val decision = Decision(
             "route1" -> Predicates.AlwaysTrue
         ) dependsOn first
-        val option = MapReduceJob("option") dependsOn (decision option "route1") doIf "${doOption}"
-        val default = MapReduceJob("default") dependsOn Optional(option)
-        val default2 = MapReduceJob("default2") dependsOn OneOf(decision default, default)
+        val option = TestMapReduceJob("option") dependsOn (decision option "route1") doIf "${doOption}"
+        val default = TestMapReduceJob("default") dependsOn Optional(option)
+        val default2 = TestMapReduceJob("default2") dependsOn OneOf(decision default, default)
         val end = End dependsOn default2
         Workflow("mixed-decision-styles", end)
     }
 
     def CustomErrorTo = {
-        val first = MapReduceJob("first") dependsOn Start
-        val errorOption = MapReduceJob("errorOption") dependsOn (first error)
-        val second = MapReduceJob("second") dependsOn first
+        val first = TestMapReduceJob("first") dependsOn Start
+        val errorOption = TestMapReduceJob("errorOption") dependsOn (first error)
+        val second = TestMapReduceJob("second") dependsOn first
         val end = End dependsOn OneOf(second, errorOption)
         Workflow("custom-errorTo", end)
     }
@@ -813,7 +822,7 @@ class ConversionSpec extends Specification {
     def SubWfEndWithSugarOption = {
 
         val wf = WfEndWithSugarOption dependsOn Start
-        val last = MapReduceJob("last") dependsOn wf
+        val last = TestMapReduceJob("last") dependsOn wf
         val end = End dependsOn last
         Workflow("sub-wf-ending-with-sugar-option", end)
     }
@@ -823,9 +832,9 @@ class ConversionSpec extends Specification {
         val decision = Decision(
             "option" -> Predicates.BooleanProperty("doOption")
         ) dependsOn Start
-        val option = MapReduceJob("option") dependsOn (decision option "option")
-        val default = MapReduceJob("default") dependsOn (decision default)
-        val sugarOption = MapReduceJob("sugarOption") dependsOn default doIf "doSugarOption"
+        val option = TestMapReduceJob("option") dependsOn (decision option "option")
+        val default = TestMapReduceJob("default") dependsOn (decision default)
+        val sugarOption = TestMapReduceJob("sugarOption") dependsOn default doIf "doSugarOption"
         val end = End dependsOn OneOf(option, Optional(sugarOption))
         Workflow("test-agg-content", end)
     }

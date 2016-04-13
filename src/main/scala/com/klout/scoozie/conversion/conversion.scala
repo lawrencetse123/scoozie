@@ -189,7 +189,7 @@ object Conversion {
                 case Left(dateTime) => toOozieDateTime(dateTime)
                 case Right(string)  => string
             },
-            coordinatorDescriptor = bundle.coordinators.map(descriptor => {
+            coordinatorDescriptors = bundle.coordinators.map(descriptor => {
                 bundle.buildCoordinator(
                     name = descriptor.name,
                     path = descriptor.path.getOrElse(

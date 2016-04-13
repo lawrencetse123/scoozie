@@ -7,7 +7,6 @@ package com.klout.scoozie.verification
 import com.klout.scoozie.conversion._
 import com.klout.scoozie.dsl._
 import com.klout.scoozie.examples.SimpleSamples._
-import com.klout.scoozie.jobs.NoOpJob
 import org.specs2.mutable._
 
 class VerificationSpec extends Specification {

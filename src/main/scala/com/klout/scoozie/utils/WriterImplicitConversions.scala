@@ -28,8 +28,8 @@ object WriterImplicitConversions {
         new Writeable(bundle, Conversion(bundle))
 
     class Writeable[W <: WritableApplication, T: CanWriteXML](underlying: W, str: Stringable[T]) {
-        def toXmlString: String = str.toXmlString(
-            XmlPostProcessing.Default,
+        def toXmlString(postProcessing: XmlPostProcessing = XmlPostProcessing.Default): String = str.toXmlString(
+            postProcessing,
             underlying.scope,
             underlying.namespace,
             underlying.elementLabel

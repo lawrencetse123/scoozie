@@ -8,16 +8,15 @@ import scalaxb.CanWriteXML
 import scalaxb.`package`._
 
 object WriterUtils {
-    def buildPropertiesString(rootPath: String,
-                              applicationProperty: String,
-                              applicationPath: String,
-                              properties: Option[Map[String, String]]): String = {
-        import com.klout.scoozie.utils.PropertyImplicits._
+    def buildProperties(rootPath: String,
+                        applicationProperty: String,
+                        applicationPath: String,
+                        properties: Option[Map[String, String]] = None): Map[String, String]  = {
 
-        (properties.getOrElse(Map()) ++ Map(
+        properties.getOrElse(Map.empty) ++ Map(
             ScoozieConfig.rootFolderParameterName -> rootPath,
             applicationProperty -> addRootSubstitutionToPath(applicationPath)
-        )).toProperties.toWritableString
+        )
     }
 
     def withXmlExtension(name: String): String = s"$name.xml"

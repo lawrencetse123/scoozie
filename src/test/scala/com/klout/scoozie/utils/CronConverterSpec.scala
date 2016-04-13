@@ -16,6 +16,7 @@ class CronConverterSpec extends Specification {
             Cron(minutes = Set(15, 30, 45)).toString must_== "* 15,30,45 * * * ? "
         }
 
+
         "implicitly convert a Range to a Cron sub-expression" in {
             Cron(hours = 8 to 17).toString must_== "* * 8-17 * * ? "
         }

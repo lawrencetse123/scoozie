@@ -1,5 +1,7 @@
 package com.klout.scoozie.writer
 
+import java.util.Properties
+
 import com.klout.scoozie.ScoozieConfig._
 import com.klout.scoozie.dsl.{ Bundle, Coordinator, Workflow }
 import com.klout.scoozie.utils.WriterImplicitConversions._
@@ -20,6 +22,9 @@ package object implicits {
                      properties: Option[Map[String, String]] = None,
                      fileSystemUtils: FileSystemUtils = LocalFileSystemUtils,
                      xmlPostProcessing: XmlPostProcessing = XmlPostProcessing.Default): Try[Unit]
+
+        def getJobProperties(path: String,
+                             properties: Option[Map[String, String]] = None): Map[String, String]
     }
 
     implicit class WorkflowWriter[W: CanWriteXML](underlying: Workflow[W]) extends CanWrite {
@@ -39,11 +44,8 @@ package object implicits {
 
             val workflowFilename = withXmlExtension(underlying.name)
 
-            val propertiesString = buildPropertiesString(
-                path,
-                "oozie.wf.application.path",
-                s"/$workflowFolderName/$workflowFilename",
-                properties)
+            import com.klout.scoozie.utils.PropertyImplicits._
+            val propertiesString = getJobProperties(path, properties).toProperties.toWritableString
 
             for {
                 _ <- fileSystemUtils.makeDirectory(getTargetFolderPath)
@@ -54,6 +56,16 @@ package object implicits {
         }
 
         override def toXml(xmlPostProcessing: XmlPostProcessing = XmlPostProcessing.Default) = underlying.toXmlString(xmlPostProcessing)
+
+        override def getJobProperties(path: String,
+                                      properties: Option[Map[String, String]] = None): Map[String, String] = {
+
+            buildProperties(
+                path,
+                "oozie.wf.application.path",
+                s"/$workflowFolderName/${withXmlExtension(underlying.name)}",
+                properties)
+        }
     }
 
     implicit class CoordinatorWriter[C: CanWriteXML, W: CanWriteXML](underlying: Coordinator[C, W]) extends CanWrite {
@@ -80,11 +92,8 @@ package object implicits {
             val workflowName = underlying.workflow.name
             val workflowPath = getWorkflowFilePath(withXmlExtension(workflowName))
 
-            val propertiesString = buildPropertiesString(
-                rootPath = path,
-                applicationProperty = "oozie.coord.application.path",
-                applicationPath = s"/$coordinatorFolderName/$coordinatorFilename",
-                properties = Some(properties.getOrElse(Map[String, String]()) + createPathProperty(workflowName, workflowFolderName)))
+            import com.klout.scoozie.utils.PropertyImplicits._
+            val propertiesString = getJobProperties(path, properties).toProperties.toWritableString
 
             for {
                 _ <- fileSystemUtils.makeDirectory(getTargetFolderPath)
@@ -100,6 +109,19 @@ package object implicits {
 
         override def toXml(xmlPostProcessing: XmlPostProcessing = XmlPostProcessing.Default) =
             underlying.toXmlString(xmlPostProcessing)
+
+        override def getJobProperties(path: String,
+                                      properties: Option[Map[String, String]] = None): Map[String, String] = {
+
+            val coordinatorFilename = withXmlExtension(underlying.name)
+            val workflowName = underlying.workflow.name
+
+            buildProperties(
+                rootPath = path,
+                applicationProperty = "oozie.coord.application.path",
+                applicationPath = s"/$coordinatorFolderName/$coordinatorFilename",
+                properties = Some(properties.getOrElse(Map[String, String]()) + createPathProperty(workflowName, workflowFolderName)))
+        }
     }
 
     implicit class BundleWriter[B: CanWriteXML, C: CanWriteXML, W: CanWriteXML, A](underlying: Bundle[B, C, W]) extends CanWrite {
@@ -129,17 +151,8 @@ package object implicits {
 
             val bundleFileName = withXmlExtension(underlying.name)
 
-            val pathProperties = underlying.coordinators.flatMap(descriptor => {
-                List(
-                    createPathProperty(descriptor.coordinator.workflow.name, workflowFolderName),
-                    createPathProperty(descriptor.coordinator.name, coordinatorFolderName))
-            }).toSet
-
-            val propertiesString = buildPropertiesString(
-                rootPath = path,
-                applicationProperty = "oozie.bundle.application.path",
-                applicationPath = s"/$bundleFolderName/$bundleFileName",
-                properties = Some(properties.getOrElse(Map[String, String]()) ++ pathProperties))
+            import com.klout.scoozie.utils.PropertyImplicits._
+            val propertiesString = getJobProperties(path, properties).toProperties.toWritableString
 
             def writeWorkflows() = {
                 for {
@@ -174,5 +187,22 @@ package object implicits {
         }
 
         override def toXml(xmlPostProcessing: XmlPostProcessing = XmlPostProcessing.Default) = underlying.toXmlString(xmlPostProcessing)
+
+        override def getJobProperties(path: String,
+                                      properties: Option[Map[String, String]] = None): Map[String, String] = {
+            val bundleFileName = withXmlExtension(underlying.name)
+
+            val pathProperties = underlying.coordinators.flatMap(descriptor => {
+                List(
+                    createPathProperty(descriptor.coordinator.workflow.name, workflowFolderName),
+                    createPathProperty(descriptor.coordinator.name, coordinatorFolderName))
+            }).toSet
+
+            buildProperties(
+                rootPath = path,
+                applicationProperty = "oozie.bundle.application.path",
+                applicationPath = s"/$bundleFolderName/$bundleFileName",
+                properties = Some(properties.getOrElse(Map[String, String]()) ++ pathProperties))
+        }
     }
 }

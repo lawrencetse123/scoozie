@@ -6,7 +6,6 @@ import ScalaxbKeys._
 import sbtrelease._
 import ReleaseStateTransformations._
 import ReleasePlugin.autoImport._
-import scalariform.formatter.preferences._
 import AssemblyKeys._
 
 assemblySettings
@@ -38,15 +37,6 @@ resolvers ++= Seq(
   Resolver.typesafeRepo("releases"),
   Resolver.url("bintray-sbt-plugins", url("http://dl.bintray.com/sbt/sbt-plugin-releases"))(Resolver.ivyStylePatterns)
 )
-
-scalariformSettings
-
-ScalariformKeys.preferences := FormattingPreferences().
-  setPreference(AlignParameters, true).
-  setPreference(IndentSpaces, 2).
-  setPreference(AlignSingleLineCaseStatements, true).
-  setPreference(PreserveDanglingCloseParenthesis, true).
-  setPreference(PreserveSpaceBeforeArguments, true)
 
 scalaxbSettings
 

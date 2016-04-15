@@ -1,4 +1,7 @@
-addSbtPlugin("com.typesafe.sbt" % "sbt-scalariform" % "1.3.0")
+resolvers ++= Seq(
+  Resolver.typesafeRepo("releases"),
+  Resolver.url("bintray-sbt-plugins", url("http://dl.bintray.com/sbt/sbt-plugin-releases"))(Resolver.ivyStylePatterns)
+)
 
 addSbtPlugin("org.scalaxb" % "sbt-scalaxb" % "1.4.0")
 

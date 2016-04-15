@@ -1,8 +1,8 @@
 package com.klout.scoozie.utils
 
-import java.util.{Date, Properties}
+import java.util.{ Date, Properties }
 
-import org.apache.oozie.client.{Job, OozieClient, WorkflowAction, WorkflowJob}
+import org.apache.oozie.client.{ Job, OozieClient, WorkflowAction, WorkflowJob }
 
 object ExecutionUtils {
   def toProperty(propertyString: String): (String, String) = {
@@ -27,32 +27,32 @@ object ExecutionUtils {
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   def run(oozieUrl: String, properties: Map[String, String]): Either[OozieError, OozieSuccess] = {
-      val oc = RetryableOozieClient(new OozieClient(oozieUrl))
+    val oc = RetryableOozieClient(new OozieClient(oozieUrl))
 
-      // create a workflow job configuration and set the workflow application path
-      val conf = oc.createConfiguration()
+    // create a workflow job configuration and set the workflow application path
+    val conf = oc.createConfiguration()
 
-      //set workflow parameters
-      properties.foreach{ case (key, value) => conf.setProperty(key, value) }
+    //set workflow parameters
+    properties.foreach{ case (key, value) => conf.setProperty(key, value) }
 
-      //submit and start the workflow job
-      val jobId: String = oc.run(conf)
-      val wfJob: WorkflowJob = oc.getJobInfo(jobId)
-      val consoleUrl: String = wfJob.getConsoleUrl
+    //submit and start the workflow job
+    val jobId: String = oc.run(conf)
+    val wfJob: WorkflowJob = oc.getJobInfo(jobId)
+    val consoleUrl: String = wfJob.getConsoleUrl
 
-      println(s"Oozie application $jobId submitted and running")
-      println("Application: " + wfJob.getAppName + " at " + wfJob.getAppPath)
-      println("Console URL: " + consoleUrl)
+    println(s"Oozie application $jobId submitted and running")
+    println("Application: " + wfJob.getAppName + " at " + wfJob.getAppPath)
+    println("Console URL: " + consoleUrl)
 
-      val async = AsyncOozieWorkflow(oc, jobId, consoleUrl)
+    val async = AsyncOozieWorkflow(oc, jobId, consoleUrl)
 
-      println(oozieUrl, properties)
-      properties.foreach(println)
+    println(oozieUrl, properties)
+    properties.foreach(println)
 
-      sequence(Map("blah" -> async)).map(_._2).toList.headOption match {
-        case Some(result) => result
-        case _            => async.successOrFail()
-      }
+    sequence(Map("blah" -> async)).map(_._2).toList.headOption match {
+      case Some(result) => result
+      case _            => async.successOrFail()
+    }
   }
 
   private val SleepInterval = 5000

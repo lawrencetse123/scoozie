@@ -34,14 +34,16 @@ libraryDependencies ++= Seq(
 
 resolvers ++= Seq(
   "snapshots" at "http://oss.sonatype.org/content/repositories/snapshots",
-  "releases" at "http://oss.sonatype.org/content/repositories/releases"
+  "releases" at "http://oss.sonatype.org/content/repositories/releases",
+  Resolver.typesafeRepo("releases"),
+  Resolver.url("bintray-sbt-plugins", url("http://dl.bintray.com/sbt/sbt-plugin-releases"))(Resolver.ivyStylePatterns)
 )
 
 scalariformSettings
 
 ScalariformKeys.preferences := FormattingPreferences().
   setPreference(AlignParameters, true).
-  setPreference(IndentSpaces, 4).
+  setPreference(IndentSpaces, 2).
   setPreference(AlignSingleLineCaseStatements, true).
   setPreference(PreserveDanglingCloseParenthesis, true).
   setPreference(PreserveSpaceBeforeArguments, true)

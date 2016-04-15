@@ -3,7 +3,7 @@ package com.klout.scoozie
 import com.klout.scoozie.dsl.Coordinator
 import com.klout.scoozie.runner.ScoozieApp
 import com.klout.scoozie.utils.ExecutionUtils
-import com.klout.scoozie.writer.{FileSystemUtils, XmlPostProcessing}
+import com.klout.scoozie.writer.{ FileSystemUtils, XmlPostProcessing }
 
 import scalaxb.CanWriteXML
 

@@ -7,7 +7,7 @@ abstract class ScoozieApp(properties: Option[Map[String, String]]) extends App {
 
   val argumentProperties: Option[Map[String, String]] = {
     if (args nonEmpty) {
-      Some(args.map( arg => {
+      Some(args.map(arg => {
         if (arg(0) != '-') throw new RuntimeException("error: usage is " + usage)
         ExecutionUtils.toProperty(arg.tail)
       }).toMap)

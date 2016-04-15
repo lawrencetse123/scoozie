@@ -21,14 +21,14 @@ val oozieVersion = "4.2.0"
 val hadoopVersion = "2.5.2"
 
 libraryDependencies ++= Seq(
-  "org.specs2" %% "specs2-core" % "3.6.6" % "test",
+  "org.specs2" %% "specs2-core" % "3.7.3" % "test",
   "org.apache.oozie" % "oozie-client" % oozieVersion,
   "org.apache.oozie" % "oozie-core" % oozieVersion,
   "org.apache.hadoop" % "hadoop-common" % hadoopVersion % "provided",
   "com.google.guava" % "guava" % "19.0",
   "org.scala-lang.modules" %% "scala-xml" % "1.0.5",
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4",
-  "joda-time" % "joda-time" % "2.9.2"
+  "joda-time" % "joda-time" % "2.9.3"
 )
 
 resolvers ++= Seq(

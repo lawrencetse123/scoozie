@@ -232,7 +232,6 @@ class XMLGenerationSpec extends Specification {
             val end = End dependsOn jsonJob
             val workflow = Workflow("test-post-processing", end)
 
-            workflow.write("/home/roman/projects/scoozie-working/scoozie-public/scoozie/src/test/resources/writer-tests/bundle-write-test/bundle.xml")
             workflow.toXml() must_== postProcessedXml
         }
     }

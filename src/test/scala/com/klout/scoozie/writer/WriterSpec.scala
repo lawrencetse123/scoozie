@@ -16,6 +16,7 @@ class WriterSpec extends Specification with TryMatchers {
     val resourcePath = "src/test/resources/"
     val testFolder = s"$resourcePath/writer-tests"
 
+    TestFileSystemUtils.makeDirectory(resourcePath)
     TestFileSystemUtils.deleteRecursively(testFolder)
     TestFileSystemUtils.makeDirectory(testFolder)
 

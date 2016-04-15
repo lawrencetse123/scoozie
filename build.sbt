@@ -34,8 +34,6 @@ libraryDependencies ++= Seq(
 resolvers ++= Seq(
   "snapshots" at "http://oss.sonatype.org/content/repositories/snapshots",
   "releases" at "http://oss.sonatype.org/content/repositories/releases",
-  Resolver.typesafeRepo("releases"),
-  Resolver.url("bintray-sbt-plugins", url("http://dl.bintray.com/sbt/sbt-plugin-releases"))(Resolver.ivyStylePatterns)
 )
 
 scalaxbSettings

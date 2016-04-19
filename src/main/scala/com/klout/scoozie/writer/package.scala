@@ -1,7 +1,5 @@
 package com.klout.scoozie.writer
 
-import java.util.Properties
-
 import com.klout.scoozie.ScoozieConfig._
 import com.klout.scoozie.dsl.{ Bundle, Coordinator, Workflow }
 import com.klout.scoozie.utils.WriterImplicitConversions._

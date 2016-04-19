@@ -5,6 +5,7 @@ import com.klout.scoozie.runner.ScoozieApp
 import com.klout.scoozie.utils.ExecutionUtils
 import com.klout.scoozie.writer.{FileSystemUtils, XmlPostProcessing}
 
+import scala.util.Failure
 import scalaxb.CanWriteXML
 
 abstract class WorkflowApp[W: CanWriteXML](workflow: Workflow[W],
@@ -15,6 +16,6 @@ abstract class WorkflowApp[W: CanWriteXML](workflow: Workflow[W],
                                            postProcessing: XmlPostProcessing = XmlPostProcessing.Default) extends ScoozieApp(properties) {
 
   import com.klout.scoozie.writer.implicits._
-  workflow.writeJob(appPath, jobProperties, fileSystemUtils, postProcessing)
-  ExecutionUtils.run(oozieUrl, workflow.getJobProperties(appPath, jobProperties))
+  val writeResult = workflow.writeJob(appPath, jobProperties, fileSystemUtils, postProcessing)
+  val executionResult = ExecutionUtils.run(oozieUrl, workflow.getJobProperties(appPath, jobProperties))
 }

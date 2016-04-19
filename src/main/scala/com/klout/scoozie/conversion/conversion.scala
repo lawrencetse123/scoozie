@@ -173,9 +173,19 @@ object Conversion {
   def apply[T](coordinator: Coordinator[T, _]): T = {
     import com.klout.scoozie.utils.WriterUtils
 
+    assert(
+      assertion = coordinator.start.getZone == coordinator.timezone,
+      message = s"Coordinator start timezone(${coordinator.start.getZone}) is not equal to the specified timezone(${coordinator.timezone})"
+    )
+
+    assert(
+      assertion = coordinator.end.getZone == coordinator.timezone,
+      message = s"Coordinator end timezone(${coordinator.start.getZone}) is not equal to the specified timezone(${coordinator.timezone})"
+    )
+
     coordinator.buildCoordinator(
-      start = toOozieDateTime(coordinator.start.withZone(coordinator.timezone)),
-      end = toOozieDateTime(coordinator.end.withZone(coordinator.timezone)),
+      start = toOozieDateTime(coordinator.start),
+      end = toOozieDateTime(coordinator.end),
       frequency = coordinator.frequency.toString,
       timezone = coordinator.timezone.toString,
       workflowPath = coordinator.workflowPath.getOrElse(s"$${${WriterUtils.buildPathPropertyName(coordinator.workflow.name)}}")
@@ -200,7 +210,7 @@ object Conversion {
     )
   }
 
-  def toOozieDateTime(dateTime: DateTime) = dateTime.toLocalDateTime.toDateTime(DateTimeZone.UTC).toString("yyyy-MM-dd'T'HH:mm'Z'")
+  def toOozieDateTime(dateTime: DateTime) = dateTime.toDateTime(DateTimeZone.UTC).toString("yyyy-MM-dd'T'HH:mm'Z'")
 
   def convertPredicate(pred: Predicate): String = {
     pred match {

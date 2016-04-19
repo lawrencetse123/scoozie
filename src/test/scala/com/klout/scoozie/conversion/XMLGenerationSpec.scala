@@ -5,10 +5,11 @@
 package com.klout.scoozie.conversion
 
 import com.klout.scoozie.dsl._
-import com.klout.scoozie.jobs.{ MapReduceJob, JavaJob }
+import com.klout.scoozie.jobs.{JavaJob, MapReduceJob}
 import com.klout.scoozie.writer.implicits._
 import oozie._
-import org.joda.time.{ DateTime, DateTimeZone }
+import org.joda.time.format.DateTimeFormat
+import org.joda.time.{DateTime, DateTimeZone}
 import org.specs2.mutable._
 
 import scalaxb._
@@ -83,6 +84,9 @@ class XMLGenerationSpec extends Specification {
         "be able to successfully generate a coordinator" in {
             import oozie.coordinator_0_4._
 
+
+            val timezone = DateTimeZone.forID("America/Los_Angeles")
+
             val coordinator = Coordinator(
                 parameters = Nil,
                 controls = Some(CONTROLS(Some(CONTROLSSequence1(
@@ -124,9 +128,9 @@ class XMLGenerationSpec extends Specification {
                     "wfInput" -> "${coord:dataIn('input')}",
                     "wfOutput" -> "${coord:dataOut('output')}"),
                 frequency = Days(1),
-                start = DateTime.parse("2009-01-02T16:00Z"),
-                end = DateTime.parse("2009-01-02T16:00Z").plusDays(2),
-                timezone = DateTimeZone.forID("America/Los_Angeles"),
+                start = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm").withZone(timezone).parseDateTime("2009-01-02T00:00"),
+                end = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm").withZone(timezone).parseDateTime("2009-01-04T00:00"),
+                timezone = timezone,
                 name = "hello-coord",
                 workflow = workflow
             )
@@ -244,8 +248,8 @@ class XMLGenerationSpec extends Specification {
             configuration = List(
                 "testJson" -> """{ "foo" : "bar" }"""
             ),
-            nameNode = Some("maprfs:///"),
-            jobTracker = Some("maprfs:///")
+            nameNode = Some("${nameNode}"),
+            jobTracker = Some("${jobTracker}")
         ) dependsOn firstJob
         val end = End dependsOn jsonJob
 

@@ -23,7 +23,7 @@ object WriterUtils {
 
   def addRootSubstitutionToPath(path: String) = "${" + ScoozieConfig.rootFolderParameterName + "}" + path
 
-  def buildPathPropertyName(name: String) = s"${name}_path"
+  def buildPathPropertyName(name: String) = s"${name.replace("-", "_")}_path"
 
   def generateXml[A: CanWriteXML](xmlObject: A,
                                   scope: String,

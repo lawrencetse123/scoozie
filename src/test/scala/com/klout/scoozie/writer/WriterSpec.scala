@@ -155,7 +155,7 @@ class WriterSpec extends Specification with TryMatchers {
                 contain("test-coordinator.xml")
             TestFileSystemUtils
                 .readTextFile(s"$currentTestFolder/coordinators/test-coordinator.xml")
-                .map(xml => xml.contains("<app-path>${test-workflow.path}</app-path>"))
+                .map(xml => xml.contains("<app-path>${test_workflow_path}</app-path>"))
                 .get must_== true
         }
 
@@ -396,11 +396,11 @@ class WriterSpec extends Specification with TryMatchers {
             TestFileSystemUtils.ls(s"$currentTestFolder/bundles").get.map(_.getName).toSeq must contain("test-bundle.xml")
             TestFileSystemUtils
                 .readTextFile(s"$currentTestFolder/coordinators/test-coordinator.xml")
-                .map(xml => xml.contains("<app-path>${test-workflow.path}</app-path>"))
+                .map(xml => xml.contains("<app-path>${test_workflow_path}</app-path>"))
                 .get must_== true
             TestFileSystemUtils
                 .readTextFile(s"$currentTestFolder/bundles/test-bundle.xml")
-                .map(xml => xml.contains("<app-path>${test-coordinator.path}</app-path>"))
+                .map(xml => xml.contains("<app-path>${test_coordinator_path}</app-path>"))
                 .get must_== true
         }
 
@@ -473,17 +473,17 @@ class WriterSpec extends Specification with TryMatchers {
                 contain("test-bundle.xml")
             TestFileSystemUtils
                 .readTextFile(s"$currentTestFolder/coordinators/test-coordinator.xml")
-                .map(xml => xml.contains("<app-path>${test-workflow.path}</app-path>"))
+                .map(xml => xml.contains("<app-path>${test_workflow_path}</app-path>"))
                 .get must_== true
             TestFileSystemUtils
                 .readTextFile(s"$currentTestFolder/coordinators/test-coordinator-2.xml")
-                .map(xml => xml.contains("<app-path>${test-workflow-2.path}</app-path>"))
+                .map(xml => xml.contains("<app-path>${test_workflow_2_path}</app-path>"))
                 .get must_== true
             TestFileSystemUtils
                 .readTextFile(s"$currentTestFolder/bundles/test-bundle.xml")
                 .map(xml =>
-                    xml.contains("<app-path>${test-coordinator.path}</app-path>") &&
-                        xml.contains("<app-path>${test-coordinator-2.path}</app-path>"))
+                    xml.contains("<app-path>${test_coordinator_path}</app-path>") &&
+                        xml.contains("<app-path>${test_coordinator_2_path}</app-path>"))
                 .get must_== true
         }
 
@@ -539,11 +539,11 @@ class WriterSpec extends Specification with TryMatchers {
             TestFileSystemUtils.ls(s"$currentTestFolder/bundles").get.map(_.getName).toSeq must contain("test-bundle.xml")
             TestFileSystemUtils
                 .readTextFile(s"$currentTestFolder/coordinators/test-coordinator.xml")
-                .map(xml => xml.contains("<app-path>${test-workflow.path}</app-path>"))
+                .map(xml => xml.contains("<app-path>${test_workflow_path}</app-path>"))
                 .get must_== true
             TestFileSystemUtils
                 .readTextFile(s"$currentTestFolder/bundles/test-bundle.xml")
-                .map(xml => "<app-path>\\$\\{test-coordinator\\.path\\}<\\/app-path>".r.findAllIn(xml).length)
+                .map(xml => "<app-path>\\$\\{test_coordinator_path\\}<\\/app-path>".r.findAllIn(xml).length)
                 .get must_== 2
         }
     }

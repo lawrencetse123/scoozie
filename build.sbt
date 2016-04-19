@@ -75,7 +75,6 @@ scalacOptions ++= Seq(
 releaseProcess := Seq[ReleaseStep](
   inquireVersions,
   runClean,
-  runTest,
   setReleaseVersion,
   commitReleaseVersion,
   tagRelease,

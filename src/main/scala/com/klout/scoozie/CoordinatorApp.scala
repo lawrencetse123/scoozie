@@ -5,7 +5,6 @@ import com.klout.scoozie.runner.ScoozieApp
 import com.klout.scoozie.utils.ExecutionUtils
 import com.klout.scoozie.writer.{ FileSystemUtils, XmlPostProcessing }
 
-import scala.util.Failure
 import scalaxb.CanWriteXML
 
 abstract class CoordinatorApp[C: CanWriteXML, W: CanWriteXML](coordinator: Coordinator[C, W],
@@ -13,10 +12,13 @@ abstract class CoordinatorApp[C: CanWriteXML, W: CanWriteXML](coordinator: Coord
                                                               appPath: String,
                                                               fileSystemUtils: FileSystemUtils,
                                                               properties: Option[Map[String, String]] = None,
-                                                              postProcessing: XmlPostProcessing = XmlPostProcessing.Default) extends ScoozieApp(properties) {
+                                                              postProcessing: XmlPostProcessing = XmlPostProcessing.Default)
+    extends ScoozieApp(properties) {
 
   import com.klout.scoozie.writer.implicits._
+
   val writeResult = coordinator.writeJob(appPath, jobProperties, fileSystemUtils, postProcessing)
+  logWriteResult()
   ExecutionUtils.removeCoordinatorJob(coordinator.name, oozieUrl)
   val executionResult = ExecutionUtils.run(oozieUrl, coordinator.getJobProperties(appPath, jobProperties))
 }

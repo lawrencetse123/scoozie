@@ -84,7 +84,6 @@ class XMLGenerationSpec extends Specification {
         "be able to successfully generate a coordinator" in {
             import oozie.coordinator_0_4._
 
-
             val timezone = DateTimeZone.forID("America/Los_Angeles")
 
             val coordinator = Coordinator(

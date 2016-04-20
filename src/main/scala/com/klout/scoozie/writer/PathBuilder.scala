@@ -4,7 +4,7 @@ import com.klout.scoozie.ScoozieConfig._
 
 class PathBuilder(rootFolderPath: String) {
 
-  def getTargetFolderPath: String = s"$rootFolderPath"
+  def getTargetFolderPath: String = if(rootFolderPath.endsWith("/")) rootFolderPath.dropRight(1) else rootFolderPath
 
   def getWorkflowFolderPath: String = s"$getTargetFolderPath/$workflowFolderName"
 

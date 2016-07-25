@@ -1,23 +1,18 @@
 package com.klout.scoozie
 
 import com.klout.scoozie.dsl.Workflow
-import com.klout.scoozie.runner.ScoozieApp
-import com.klout.scoozie.utils.ExecutionUtils
+import com.klout.scoozie.runner.WorkflowAppAbs
 import com.klout.scoozie.writer.{FileSystemUtils, XmlPostProcessing}
+import org.apache.oozie.client.OozieClient
 
 import scalaxb.CanWriteXML
 
-abstract class WorkflowApp[W: CanWriteXML](workflow: Workflow[W],
-                                           oozieUrl: String,
-                                           appPath: String,
-                                           fileSystemUtils: FileSystemUtils,
-                                           properties: Option[Map[String, String]] = None,
-                                           postProcessing: XmlPostProcessing = XmlPostProcessing.Default)
-    extends ScoozieApp(properties) {
-
-  import com.klout.scoozie.writer.implicits._
-
-  val writeResult = workflow.writeJob(appPath, jobProperties, fileSystemUtils, postProcessing)
-  logWriteResult()
-  val executionResult = ExecutionUtils.run(oozieUrl, workflow.getJobProperties(appPath, jobProperties))
+class WorkflowApp[W: CanWriteXML](override val workflow: Workflow[W],
+                                  oozieUrl: String,
+                                  override val appPath: String,
+                                  override val fileSystemUtils: FileSystemUtils,
+                                  override val properties: Option[Map[String, String]] = None,
+                                  override val postProcessing: XmlPostProcessing = XmlPostProcessing.Default)
+    extends WorkflowAppAbs[W] {
+  override val oozieClient: OozieClient = new OozieClient(oozieUrl)
 }

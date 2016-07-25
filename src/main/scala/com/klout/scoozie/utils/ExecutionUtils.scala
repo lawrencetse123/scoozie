@@ -1,8 +1,10 @@
 package com.klout.scoozie.utils
 
-import java.util.{ Date, Properties }
+import _root_.retry._
+import org.apache.oozie.client._
 
-import org.apache.oozie.client.{ Job, OozieClient, WorkflowAction, WorkflowJob }
+import scala.concurrent.Future
+import scala.concurrent.duration._
 
 object ExecutionUtils {
   def toProperty(propertyString: String): (String, String) = {
@@ -11,129 +13,78 @@ object ExecutionUtils {
     else property(0) -> property(1)
   }
 
-  def removeCoordinatorJob(appName: String, oozieUrl: String): Unit = {
-    val oc = RetryableOozieClient(new OozieClient(oozieUrl))
-
+  def removeCoordinatorJob(appName: String, oozieClient: OozieClient): Unit = {
     import scala.collection.JavaConversions._
-    val coordJobsToRemove = oc.client.getCoordJobsInfo(s"NAME=$appName", 1, 100).filter{
+    val coordJobsToRemove = oozieClient.getCoordJobsInfo(s"NAME=$appName", 1, 100).filter{
       cj => cj.getAppName == appName && cj.getStatus == Job.Status.RUNNING
     }.map(_.getId).toSeq
 
-    coordJobsToRemove.foreach(oc.client.kill)
+    coordJobsToRemove.foreach(oozieClient.kill)
   }
 
-  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // The shit beyond this point needs to be completely rewritten. /////////////////////////////////////////////////////
-  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  def run[T <: OozieClient, K, J](oozieClient: T, properties: Map[String, String])(implicit ev: OozieClientLike[T, K, J]): Future[K] ={
+    println("Starting Execution")
 
-  def run(oozieUrl: String, properties: Map[String, String]): Either[OozieError, OozieSuccess] = {
-    val oc = RetryableOozieClient(new OozieClient(oozieUrl))
+    val conf = oozieClient.createConfiguration()
+    properties.foreach { case (key, value) => conf.setProperty(key, value) }
 
-    // create a workflow job configuration and set the workflow application path
-    val conf = oc.createConfiguration()
+    // Rerun success conditions
+    implicit val startJobSuccess = Success[String](!_.isEmpty)
+    implicit val getJobStatusSuccess = Success[J](x => !(x == ev.prep || x == ev.running))
 
-    //set workflow parameters
-    properties.foreach{ case (key, value) => conf.setProperty(key, value) }
+    // Rerun policies
+    val retry = Backoff(5, 500.millis)
+    val retryForever = Pause.forever(1.second)
 
-    //submit and start the workflow job
-    val jobId: String = oc.run(conf)
-    val wfJob: WorkflowJob = oc.getJobInfo(jobId)
-    val consoleUrl: String = wfJob.getConsoleUrl
+    import scala.concurrent.ExecutionContext.Implicits.global
 
-    println(s"Oozie application $jobId submitted and running")
-    println("Application: " + wfJob.getAppName + " at " + wfJob.getAppPath)
-    println("Console URL: " + consoleUrl)
+    def startJob: Future[String] = retry(() => Future({
+        val id: String = oozieClient.run(conf)
+        println(s"Started job: $id")
+        id
+    }))
 
-    val async = AsyncOozieWorkflow(oc, jobId, consoleUrl)
-
-    println(oozieUrl, properties)
-    properties.foreach(println)
-
-    sequence(Map("blah" -> async)).map(_._2).toList.headOption match {
-      case Some(result) => result
-      case _            => async.successOrFail()
-    }
-  }
-
-  private val SleepInterval = 5000
-
-  private def sequence[T](workflowMap: Map[T, AsyncOozieWorkflow]): Map[T, Either[OozieError, OozieSuccess]] = {
-    val workflows = workflowMap map (_._2)
-
-    while (workflows exists (_.isRunning)) {
-      println("Workflow job running ...")
-      workflows flatMap (_.actions) filter (_.getStatus == WorkflowAction.Status.RUNNING) foreach (action => {
-        val now = new Date
-        println(now + " " + action)
+    def retryJobStatus(id: String): Future[J] = retryForever(() =>
+      Future({
+        val status = ev.getJobStatus(oozieClient, id)
+        println(s"JOB: $id $status")
+        status
       })
-      Thread.sleep(SleepInterval)
-    }
-    // print the final status to the workflow job
-    println("Workflow jobs completed ...")
-    workflows foreach (a => println(a.jobInfo()))
-    workflowMap mapValues (_.successOrFail())
-  }
+    )
 
-  private def retryable[T](body: () => T): T = {
-    val backoff: Double = 1.5
-    def retryable0(body: () => T, remaining: Int, retrySleep: Double): T = {
-      try {
-        body()
-      } catch {
-        case t: Throwable =>
-          println("ERROR : Unexpected exception ")
-          t.printStackTrace
-          if (remaining > 0) {
-            println("Retries left: " + remaining + ". Sleeping for " + retrySleep)
-            Thread.sleep(retrySleep.toLong)
-            retryable0(body, remaining - 1, retrySleep * backoff)
-          } else
-            throw new RuntimeException("error: Allowed number of retries exceeded. Exiting with failure.")
-      }
-    }
-    retryable0(body, 5, 2000)
-  }
-
-  case class RetryableOozieClient(client: OozieClient) {
-    def run(conf: Properties): String = retryable {
-      () => client.run(conf)
-    }
-
-    def createConfiguration(): Properties = retryable {
-      () => client.createConfiguration()
-    }
-
-    def getJobInfo(jobId: String): WorkflowJob = retryable {
-      () => client.getJobInfo(jobId)
-    }
-
-    def getJobLog(jobId: String): String = retryable {
-      () => client.getJobLog(jobId)
+    for {
+      jobId <- startJob
+      status <- retryJobStatus(jobId)
+      job <- Future(ev.getJobInfo(oozieClient, jobId))
+    } yield {
+      if (status != ev.succeeded) throw new Exception(s"The job was not successful. Completed with status: $status")
+      else job
     }
   }
+}
 
-  case class OozieSuccess(jobId: String)
+trait OozieClientLike[Client, Job, JobStatus] {
+  val running: JobStatus
+  val prep: JobStatus
+  val succeeded: JobStatus
+  def getJobInfo(oozieClient: Client, jobId: String): Job
+  def getJobStatus(oozieClient: Client, jobId: String): JobStatus
+}
 
-  case class OozieError(jobId: String, jobLog: String, consoleUrl: String)
+object OozieClientLike {
+  implicit object OozieClientLikeCoord extends OozieClientLike[OozieClient, Job, Job.Status] {
+    val running: Job.Status = Job.Status.RUNNING
+    val prep: Job.Status = Job.Status.PREP
+    val succeeded: Job.Status = Job.Status.SUCCEEDED
+    def getJobInfo(oozieClient: OozieClient, jobId: String): Job = oozieClient.getCoordJobInfo(jobId)
+    def getJobStatus(oozieClient: OozieClient, jobId: String): Job.Status = getJobInfo(oozieClient, jobId).getStatus
+  }
 
-  case class AsyncOozieWorkflow(oc: RetryableOozieClient, jobId: String, consoleUrl: String) {
-    def jobInfo(): WorkflowJob = oc.getJobInfo(jobId)
-
-    def jobLog(): String = oc.getJobLog(jobId)
-
-    def isRunning(): Boolean = (jobInfo.getStatus() == WorkflowJob.Status.RUNNING)
-
-    def isSuccess(): Boolean = (jobInfo.getStatus() == WorkflowJob.Status.SUCCEEDED)
-
-    import scala.collection.JavaConverters._
-    def actions(): List[WorkflowAction] = jobInfo().getActions.asScala.toList
-
-    def successOrFail(): Either[OozieError, OozieSuccess] = {
-      if (!this.isSuccess()) {
-        Left(OozieError(jobId, jobLog(), consoleUrl))
-      } else {
-        Right(OozieSuccess(jobId))
-      }
-    }
+  implicit object OozieClientLikeExecutable extends OozieClientLike[OozieClient, WorkflowJob, WorkflowJob.Status] {
+    val running: WorkflowJob.Status = WorkflowJob.Status.RUNNING
+    val prep: WorkflowJob.Status = WorkflowJob.Status.PREP
+    val succeeded: WorkflowJob.Status = WorkflowJob.Status.SUCCEEDED
+    def getJobInfo(oozieClient: OozieClient, id: String): WorkflowJob = oozieClient.getJobInfo(id)
+    def getJobStatus(oozieClient: OozieClient, id: String): WorkflowJob.Status = getJobInfo(oozieClient, id).getStatus
   }
 }

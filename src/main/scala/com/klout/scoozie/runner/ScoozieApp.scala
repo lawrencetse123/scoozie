@@ -1,14 +1,24 @@
 package com.klout.scoozie.runner
 
 import com.klout.scoozie.utils.ExecutionUtils
-import com.klout.scoozie.utils.ExecutionUtils.{OozieSuccess, OozieError}
+import com.klout.scoozie.writer.{FileSystemUtils, XmlPostProcessing}
+import org.apache.oozie.client.OozieClient
 
-import scala.util.{Success, Failure, Try}
+import scala.concurrent.Future
+import scala.util.{Failure, Success, Try}
 
-abstract class ScoozieApp(properties: Option[Map[String, String]]) extends App {
+abstract class ScoozieApp
+    extends App {
+
+  val properties: Option[Map[String, String]]
+  val appPath: String
+  val oozieClient: OozieClient
+  val fileSystemUtils: FileSystemUtils
+  val postProcessing: XmlPostProcessing
+
   val usage = "java -cp <...> com.your.scoozie.app.ObjectName -todayString=foo -yesterdayString=foo ..."
 
-  val argumentProperties: Option[Map[String, String]] = {
+  lazy val argumentProperties: Option[Map[String, String]] = {
     if (args nonEmpty) {
       Some(args.map(arg => {
         if (arg(0) != '-') throw new RuntimeException("error: usage is " + usage)
@@ -17,10 +27,13 @@ abstract class ScoozieApp(properties: Option[Map[String, String]]) extends App {
     } else None
   }
 
-  val jobProperties = (argumentProperties ++ properties).reduceOption(_ ++ _)
+  lazy val jobProperties = (argumentProperties ++ properties).reduceOption(_ ++ _)
 
   val writeResult: Try[Unit]
-  val executionResult: Either[OozieError, OozieSuccess]
+
+  type Job
+  type JobStatus
+  val executionResult: Future[Job]
 
   def logWriteResult() = writeResult match {
     case Success(_) => println("Successfully wrote application.")

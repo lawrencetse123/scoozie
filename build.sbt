@@ -51,8 +51,7 @@ dependencyOverrides ++= Set(
 resolvers ++= Seq(
   "snapshots" at "http://oss.sonatype.org/content/repositories/snapshots",
   "releases" at "http://oss.sonatype.org/content/repositories/releases",
-//  "pentaho shit" at "http://conjars.org/repo/",
-  "Hortonworks Nexus" at "http://repo.hortonworks.com/content/repositories/releases/",
+  "nexus" at "http://repo.hortonworks.com/content/repositories/releases/",
   "softprops-maven" at "http://dl.bintray.com/content/softprops/maven"
 )
 
@@ -123,11 +122,3 @@ mergeStrategy in assembly <<= (mergeStrategy in assembly) { (old) =>
     case _ => MergeStrategy.first
   }
 }
-
-
-
-
-
-
-
-

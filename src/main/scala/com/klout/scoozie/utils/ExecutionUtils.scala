@@ -1,6 +1,6 @@
 package com.klout.scoozie.utils
 
-import _root_.retry._
+import retry._
 import org.apache.oozie.client._
 
 import scala.concurrent.Future
@@ -29,20 +29,19 @@ object ExecutionUtils {
     properties.foreach { case (key, value) => conf.setProperty(key, value) }
 
     // Rerun success conditions
-    implicit val startJobSuccess = Success[String](!_.isEmpty)
-    implicit val getJobStatusSuccess = Success[J](x => !(x == ev.prep || x == ev.running))
+    val startJobSuccess = Success[String](!_.isEmpty)
+    val retryJobStatusSuccess = Success[J](x => !(x == ev.prep || x == ev.running))
+    implicit val executionContext = scala.concurrent.ExecutionContext.Implicits.global
 
     // Rerun policies
     val retry = Backoff(5, 500.millis)
     val retryForever = Pause.forever(1.second)
 
-    import scala.concurrent.ExecutionContext.Implicits.global
-
     def startJob: Future[String] = retry(() => Future({
         val id: String = oozieClient.run(conf)
         println(s"Started job: $id")
         id
-    }))
+    }))(startJobSuccess, executionContext)
 
     def retryJobStatus(id: String): Future[J] = retryForever(() =>
       Future({
@@ -50,7 +49,7 @@ object ExecutionUtils {
         println(s"JOB: $id $status")
         status
       })
-    )
+    )(retryJobStatusSuccess, executionContext)
 
     for {
       jobId <- startJob

@@ -6,6 +6,8 @@ package com.klout.scoozie.verification
 
 import com.klout.scoozie.conversion._
 
+import scala.io.Source
+
 case class VerificationNode(graphNode: GraphNode, parentThreads: Seq[ForkThread])
 
 //path is the child of the fork that this thread lies on
@@ -76,7 +78,7 @@ object Verification {
 * Should only be used if verifyForkJoins fails
 */
   def repairForkJoins(graph: Set[GraphNode], repairAutomatically: Boolean = false, defaultPath: String = "${outputDataRoot}"): Set[GraphNode] = {
-    val ln = io.Source.stdin.getLines
+    val ln = Source.stdin.getLines
     if (!repairAutomatically) {
       println("worflow fork/join structure not allowed by oozie runtime - repair? (y/n)")
       val repair = ln.next

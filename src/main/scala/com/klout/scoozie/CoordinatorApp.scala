@@ -1,24 +1,18 @@
 package com.klout.scoozie
 
 import com.klout.scoozie.dsl.Coordinator
-import com.klout.scoozie.runner.ScoozieApp
-import com.klout.scoozie.utils.ExecutionUtils
-import com.klout.scoozie.writer.{ FileSystemUtils, XmlPostProcessing }
+import com.klout.scoozie.runner.CoordinatorAppAbs
+import com.klout.scoozie.writer.{FileSystemUtils, XmlPostProcessing}
+import org.apache.oozie.client.OozieClient
 
 import scalaxb.CanWriteXML
 
-abstract class CoordinatorApp[C: CanWriteXML, W: CanWriteXML](coordinator: Coordinator[C, W],
-                                                              oozieUrl: String,
-                                                              appPath: String,
-                                                              fileSystemUtils: FileSystemUtils,
-                                                              properties: Option[Map[String, String]] = None,
-                                                              postProcessing: XmlPostProcessing = XmlPostProcessing.Default)
-    extends ScoozieApp(properties) {
-
-  import com.klout.scoozie.writer.implicits._
-
-  val writeResult = coordinator.writeJob(appPath, jobProperties, fileSystemUtils, postProcessing)
-  logWriteResult()
-  ExecutionUtils.removeCoordinatorJob(coordinator.name, oozieUrl)
-  val executionResult = ExecutionUtils.run(oozieUrl, coordinator.getJobProperties(appPath, jobProperties))
+class CoordinatorApp[C: CanWriteXML, W: CanWriteXML](override val coordinator: Coordinator[C, W],
+                                                     oozieUrl: String,
+                                                     override val appPath: String,
+                                                     override val fileSystemUtils: FileSystemUtils,
+                                                     override val properties: Option[Map[String, String]] = None,
+                                                     override val postProcessing: XmlPostProcessing = XmlPostProcessing.Default)
+    extends CoordinatorAppAbs[C, W] {
+  override val oozieClient: OozieClient = new OozieClient(oozieUrl)
 }

@@ -9,5 +9,5 @@ object ScoozieConfig {
   val coordinatorFolderName = "coordinators"
   val bundleFolderName = "bundles"
   val propertyFileName = "job.properties"
-  val rootFolderParameterName = "rootFolder.path"
+  val rootFolderParameterName = "rootFolder_path"
 }

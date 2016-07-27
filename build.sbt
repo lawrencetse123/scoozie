@@ -3,6 +3,7 @@
 ///
 
 import ScalaxbKeys._
+import sbt.ExclusionRule
 import sbtrelease._
 import ReleaseStateTransformations._
 import ReleasePlugin.autoImport._
@@ -17,22 +18,41 @@ organization := "com.klout"
 scalaVersion := "2.11.7"
 
 val oozieVersion = "4.2.0"
-
-val hadoopVersion = "2.5.2"
+val hadoopVersion = "2.7.2"
+val hadoopMiniClusterVersion = "0.1.7"
 
 libraryDependencies ++= Seq(
   "org.specs2" %% "specs2-core" % "3.7.3" % "test",
-  "org.apache.oozie" % "oozie-client" % oozieVersion,
-  "org.apache.oozie" % "oozie-core" % oozieVersion,
+  "org.apache.oozie" % "oozie-client" % oozieVersion excludeAll ExclusionRule(organization = "org.apache.hadoop"),
+  "org.apache.oozie" % "oozie-core" % oozieVersion classifier "tests" excludeAll ExclusionRule(organization = "org.apache.hadoop"),
   "com.google.guava" % "guava" % "19.0",
   "org.scala-lang.modules" %% "scala-xml" % "1.0.5",
   "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4",
-  "joda-time" % "joda-time" % "2.9.3"
+  "joda-time" % "joda-time" % "2.9.3",
+  "com.github.sakserv" % "hadoop-mini-clusters-oozie" % hadoopMiniClusterVersion % "test",
+  "com.github.sakserv" %  "hadoop-mini-clusters-hdfs" % hadoopMiniClusterVersion % "test",
+  "org.apache.hadoop" % "hadoop-hdfs" % hadoopVersion classifier "tests",
+  "org.apache.hadoop" % "hadoop-common" % hadoopVersion classifier "tests",
+  "me.lessis" %% "retry" % "0.2.0"
 )
+
+dependencyOverrides ++= Set(
+  "org.apache.oozie" % "oozie-core" % oozieVersion,
+  "org.apache.oozie" % "oozie-tools" % oozieVersion,
+  "org.apache.oozie.test" % "oozie-mini" % oozieVersion,
+  "org.apache.hadoop" % "hadoop-client" % hadoopVersion,
+  "org.apache.hadoop" % "hadoop-mapreduce-client-app" % hadoopVersion,
+  "org.apache.hadoop" % "hadoop-mapreduce-client-hs" % hadoopVersion,
+  "org.apache.hadoop" % "hadoop-mapreduce-client-core" % hadoopVersion,
+  "org.apache.hadoop" % "hadoop-mapreduce-client-jobclient" % hadoopVersion,
+  "org.mortbay.jetty" % "jetty" % "6.1.26"
+).map(_ % "test")
 
 resolvers ++= Seq(
   "snapshots" at "http://oss.sonatype.org/content/repositories/snapshots",
-  "releases" at "http://oss.sonatype.org/content/repositories/releases"
+  "releases" at "http://oss.sonatype.org/content/repositories/releases",
+  "nexus" at "http://repo.hortonworks.com/content/repositories/releases/",
+  "softprops-maven" at "http://dl.bintray.com/content/softprops/maven"
 )
 
 scalaxbSettings

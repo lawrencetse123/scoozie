@@ -3,7 +3,7 @@ package com.klout.scoozie.writer
 import java.io.File
 
 import com.klout.scoozie.dsl._
-import com.klout.scoozie.jobs.MapReduceJob
+import com.klout.scoozie.jobs.{ShellScript, ShellJob, MapReduceJob}
 import com.klout.scoozie.writer.implicits._
 import org.joda.time.{ DateTime, DateTimeZone }
 import org.specs2.matcher.TryMatchers
@@ -43,8 +43,8 @@ class WriterSpec extends Specification with TryMatchers {
 
         "write a workflow job to the correct path" in {
             val workflow = Workflow(
-                name = "test-workflow",
-                end = End dependsOn (MapReduceJob("first") dependsOn Start)
+              name = "test-workflow",
+              end = End dependsOn (MapReduceJob("first") dependsOn Start)
             )
 
             val currentTestFolder = s"$testFolder/workflow-write-job-test"
@@ -58,6 +58,36 @@ class WriterSpec extends Specification with TryMatchers {
             result.isSuccess must_== true
             TestFileSystemUtils.ls(s"$currentTestFolder").get.map(_.getName).toSeq must contain("workflows", "job.properties")
             TestFileSystemUtils.ls(s"$currentTestFolder/workflows").get.map(_.getName).toSeq must contain(s"${workflow.name}.xml")
+        }
+
+        "write a workflow job with a shell action to the correct path" in {
+            val workflow = Workflow(
+                name = "test-workflow",
+                end = End dependsOn (ShellJob("test-shell", Right(ShellScript("echo test"))) dependsOn Start)
+            )
+
+            val currentTestFolder = s"$testFolder/workflow-write-job-with-shell-action-test"
+
+            TestFileSystemUtils.makeDirectory(currentTestFolder)
+
+            val result: Try[Unit] = workflow.writeJob(
+                path = currentTestFolder,
+                fileSystemUtils = TestFileSystemUtils)
+
+            result.isSuccess must_== true
+            TestFileSystemUtils.ls(s"$currentTestFolder").get.map(_.getName).toSeq must contain("workflows", "job.properties", "bin")
+            TestFileSystemUtils.ls(s"$currentTestFolder/workflows").get.map(_.getName).toSeq must contain(s"test-workflow.xml")
+            TestFileSystemUtils.ls(s"$currentTestFolder/bin").get.map(_.getName).toSeq must contain(s"test-shell.sh")
+            TestFileSystemUtils
+              .readTextFile(s"$currentTestFolder/workflows/test-workflow.xml")
+              .map(xml =>
+                xml.contains("<exec>test-shell.sh</exec>")
+                && xml.contains("<file>${test_shell_path}#test-shell.sh</file>"))
+              .get must_== true
+            TestFileSystemUtils
+              .readTextFile(s"$currentTestFolder/job.properties")
+              .map(xml => xml.contains("test_shell_path=${rootFolder_path}/bin/test-shell.sh"))
+              .get must_== true
         }
     }
 
@@ -157,6 +187,54 @@ class WriterSpec extends Specification with TryMatchers {
                 .readTextFile(s"$currentTestFolder/coordinators/test-coordinator.xml")
                 .map(xml => xml.contains("<app-path>${test_workflow_path}</app-path>"))
                 .get must_== true
+        }
+
+        "write a coordinator job with a shell action to the correct path" in {
+          val workflow = Workflow(
+            name = "test-workflow",
+            end = End dependsOn (ShellJob("test-shell", Right(ShellScript("echo test"))) dependsOn Start)
+          )
+
+          val coordinator = Coordinator(
+            name = "test-coordinator",
+            workflow = workflow,
+            timezone = DateTimeZone.forID("Australia/Sydney"),
+            start = DateTime.now(),
+            end = DateTime.now().plusDays(10),
+            frequency = Days(24),
+            configuration = Nil,
+            workflowPath = None
+          )
+
+          val currentTestFolder = s"$testFolder/coordinator-write-job-with-shell-action-test"
+
+          TestFileSystemUtils.makeDirectory(currentTestFolder)
+
+          val result: Try[Unit] = coordinator.writeJob(
+            path = currentTestFolder,
+            fileSystemUtils = TestFileSystemUtils)
+
+          result.isSuccess must_== true
+          TestFileSystemUtils.ls(s"$currentTestFolder").get.map(_.getName).toSeq must
+            contain("workflows", "coordinators", "job.properties", "bin")
+          TestFileSystemUtils.ls(s"$currentTestFolder/workflows").get.map(_.getName).toSeq must
+            contain("test-workflow.xml")
+          TestFileSystemUtils.ls(s"$currentTestFolder/coordinators").get.map(_.getName).toSeq must
+            contain("test-coordinator.xml")
+          TestFileSystemUtils
+            .readTextFile(s"$currentTestFolder/coordinators/test-coordinator.xml")
+            .map(xml => xml.contains("<app-path>${test_workflow_path}</app-path>"))
+            .get must_== true
+          TestFileSystemUtils
+            .readTextFile(s"$currentTestFolder/workflows/test-workflow.xml")
+            .map(xml =>
+              xml.contains("<exec>test-shell.sh</exec>")
+                && xml.contains("<file>${test_shell_path}#test-shell.sh</file>"))
+            .get must_== true
+          TestFileSystemUtils
+            .readTextFile(s"$currentTestFolder/job.properties")
+            .map(xml => xml.contains("test_shell_path=${rootFolder_path}/bin/test-shell.sh"))
+            .get must_== true
         }
 
         "throw an exception if the workflow path is specified and a write job is attempted" in {
@@ -403,6 +481,71 @@ class WriterSpec extends Specification with TryMatchers {
                 .map(xml => xml.contains("<app-path>${test_coordinator_path}</app-path>"))
                 .get must_== true
         }
+
+        "write a bundle job with one coordinator and one workflow with a shell action to the correct path" in {
+          val workflow = Workflow(
+            name = "test-workflow",
+            end = End dependsOn (ShellJob("test-shell", Right(ShellScript("echo test"))) dependsOn Start)
+          )
+
+          val coordinator = Coordinator(
+            name = "test-coordinator",
+            workflow = workflow,
+            timezone = DateTimeZone.forID("Australia/Sydney"),
+            start = DateTime.now(),
+            end = DateTime.now().plusDays(10),
+            frequency = Days(24),
+            configuration = Nil,
+            workflowPath = None
+          )
+
+          val bundle = Bundle(
+            name = "test-bundle",
+            kickoffTime = Right("${kickOffTime}"),
+            coordinators = List(
+              CoordinatorDescriptor(
+                name = "coordJobFromBundle1",
+                path = None,
+                coordinator = coordinator
+              )
+            )
+          )
+
+          val currentTestFolder = s"$testFolder/bundle-write-job-with-shell-action-test"
+
+          TestFileSystemUtils.makeDirectory(currentTestFolder)
+
+          val result: Try[Unit] = bundle.writeJob(
+            path = currentTestFolder,
+            fileSystemUtils = TestFileSystemUtils)
+
+          result.isSuccess must_== true
+          TestFileSystemUtils.ls(s"$currentTestFolder").get.map(_.getName).toSeq must
+            contain("workflows", "coordinators", "bundles", "job.properties")
+          TestFileSystemUtils.ls(s"$currentTestFolder/workflows").get.map(_.getName).toSeq must
+            contain(s"test-workflow.xml")
+          TestFileSystemUtils.ls(s"$currentTestFolder/coordinators").get.map(_.getName).toSeq must
+            contain("test-coordinator.xml")
+          TestFileSystemUtils.ls(s"$currentTestFolder/bundles").get.map(_.getName).toSeq must contain("test-bundle.xml")
+          TestFileSystemUtils
+            .readTextFile(s"$currentTestFolder/coordinators/test-coordinator.xml")
+            .map(xml => xml.contains("<app-path>${test_workflow_path}</app-path>"))
+            .get must_== true
+          TestFileSystemUtils
+            .readTextFile(s"$currentTestFolder/bundles/test-bundle.xml")
+            .map(xml => xml.contains("<app-path>${test_coordinator_path}</app-path>"))
+            .get must_== true
+          TestFileSystemUtils
+            .readTextFile(s"$currentTestFolder/workflows/test-workflow.xml")
+            .map(xml =>
+              xml.contains("<exec>test-shell.sh</exec>")
+                && xml.contains("<file>${test_shell_path}#test-shell.sh</file>"))
+            .get must_== true
+          TestFileSystemUtils
+            .readTextFile(s"$currentTestFolder/job.properties")
+            .map(xml => xml.contains("test_shell_path=${rootFolder_path}/bin/test-shell.sh"))
+            .get must_== true
+      }
 
         "write a bundle job with multiple coordinators and multiple workflow to the correct path" in {
             val workflow = Workflow(

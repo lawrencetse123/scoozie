@@ -19,4 +19,8 @@ class PathBuilder(rootFolderPath: String) {
   def getCoordinatorFilePath(coordinatorFileName: String): String = s"$getCoordinatorFolderPath/$coordinatorFileName"
 
   def getBundleFilePath(bundleFileName: String): String = s"$getBundleFolderPath/$bundleFileName"
+
+  def getScriptsFolderPath: String = s"$getTargetFolderPath/$scriptFolderName"
+
+  def getScriptFilePath(scriptName: String): String = s"$getScriptsFolderPath/$scriptName"
 }

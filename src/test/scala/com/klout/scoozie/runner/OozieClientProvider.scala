@@ -8,13 +8,14 @@ import org.apache.oozie.local.LocalOozie
 trait OozieClientProvider {
   val oozieClient: OozieClient
   def oozieCoordClient: OozieClient
+  def startOozie(): Unit
+  def stopOozie(): Unit
 }
 
 trait TestOozieClientProvider extends OozieClientProvider {
-  this: HdfsProvider =>
+  this: TestHdfsProvider =>
 
-  lazy val oozieLocalServer = {
-    val server = new OozieLocalServer.Builder()
+  lazy val oozieLocalServer = new OozieLocalServer.Builder()
       .setOozieTestDir("embedded_oozie")
       .setOozieHomeDir("oozie_home")
       .setOozieUsername(System.getProperty("user.name"))
@@ -28,13 +29,13 @@ trait TestOozieClientProvider extends OozieClientProvider {
       .setOoziePurgeLocalShareLibCache(false)
       .build()
 
-    server.start()
-    server
-  }
-
   lazy val oozieClient: OozieClient = oozieLocalServer.getOozieClient
+
   def oozieCoordClient: OozieClient = {
-    oozieLocalServer.getOozieClient
     LocalOozie.getCoordClient
   }
+
+  def startOozie(): Unit = oozieLocalServer.start()
+
+  def stopOozie(): Unit = oozieLocalServer.stop()
 }

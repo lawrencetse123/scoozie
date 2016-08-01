@@ -1,9 +1,11 @@
 package com.klout.scoozie.writer
 
 import com.klout.scoozie.ScoozieConfig._
-import com.klout.scoozie.dsl.{ Bundle, Coordinator, Workflow }
+import com.klout.scoozie.dsl.{Bundle, Coordinator, Workflow}
+import com.klout.scoozie.jobs.ShellScriptDescriptor
 import com.klout.scoozie.utils.WriterImplicitConversions._
 import com.klout.scoozie.utils.WriterUtils._
+import org.apache.oozie.client.OozieClient
 
 import scala.util.Try
 import scalaxb.CanWriteXML
@@ -23,6 +25,23 @@ package object implicits {
 
     def getJobProperties(path: String,
                          properties: Option[Map[String, String]] = None): Map[String, String]
+
+    protected def writeShellScripts(path: String,
+                                    shellActions: List[ShellScriptDescriptor],
+                                    fileSystemUtils: FileSystemUtils = LocalFileSystemUtils) = {
+      import com.klout.scoozie.ScoozieConfig._
+      import com.klout.scoozie.utils.SeqImplicits._
+
+      val pathBuilder: PathBuilder = new PathBuilder(path)
+      import pathBuilder._
+
+      for {
+        _ <- fileSystemUtils.makeDirectory(getScriptsFolderPath)
+        _ <- sequenceTry(shellActions.map(descriptor =>
+          fileSystemUtils
+            .writeTextFile(getScriptFilePath(s"${descriptor.name}.$scriptExtension"), descriptor.script)))
+      } yield ()
+    }
   }
 
   implicit class WorkflowWriter[W: CanWriteXML](underlying: Workflow[W]) extends CanWrite {
@@ -37,19 +56,20 @@ package object implicits {
                           fileSystemUtils: FileSystemUtils = LocalFileSystemUtils,
                           xmlPostProcessing: XmlPostProcessing = XmlPostProcessing.Default): Try[Unit] = {
       val pathBuilder: PathBuilder = new PathBuilder(path)
-
       import pathBuilder._
 
       val workflowFilename = withXmlExtension(underlying.name)
 
       import com.klout.scoozie.utils.PropertyImplicits._
-      val propertiesString = getJobProperties(path, properties).toProperties.toWritableString
+
+      val propertiesString = (getJobProperties(path, properties)).toProperties.toWritableString
 
       for {
         _ <- fileSystemUtils.makeDirectory(getTargetFolderPath)
         _ <- fileSystemUtils.makeDirectory(getWorkflowFolderPath)
         _ <- fileSystemUtils.writeTextFile(getPropertiesFilePath, propertiesString)
         _ <- fileSystemUtils.writeTextFile(getWorkflowFilePath(workflowFilename), underlying.toXmlString(xmlPostProcessing))
+        _ <- writeShellScripts(path, findShellActions(underlying), fileSystemUtils)
       } yield ()
     }
 
@@ -57,12 +77,13 @@ package object implicits {
 
     override def getJobProperties(path: String,
                                   properties: Option[Map[String, String]] = None): Map[String, String] = {
+      val pathBuilder: PathBuilder = new PathBuilder(path)
 
       buildProperties(
         path,
-        "oozie.wf.application.path",
+        OozieClient.APP_PATH,
         s"/$workflowFolderName/${withXmlExtension(underlying.name)}",
-        properties)
+        (properties ++ Some(getShellActionProperties(underlying))).headOption)
     }
   }
 
@@ -102,6 +123,7 @@ package object implicits {
           getCoordinatorFilePath(coordinatorFilename),
           underlying.toXmlString(xmlPostProcessing))
         _ <- fileSystemUtils.writeTextFile(workflowPath, underlying.workflow.toXmlString(xmlPostProcessing))
+        _ <- writeShellScripts(path, findShellActions(underlying.workflow), fileSystemUtils)
       } yield ()
     }
 
@@ -116,9 +138,13 @@ package object implicits {
 
       buildProperties(
         rootPath = path,
-        applicationProperty = "oozie.coord.application.path",
+        applicationProperty = OozieClient.COORDINATOR_APP_PATH,
         applicationPath = s"/$coordinatorFolderName/$coordinatorFilename",
-        properties = Some(properties.getOrElse(Map[String, String]()) + createPathProperty(workflowName, workflowFolderName)))
+        properties =
+          Some(
+            properties.getOrElse(Map[String, String]()) ++
+            getShellActionProperties(underlying.workflow) +
+            createPathProperty(workflowName, workflowFolderName)))
     }
   }
 
@@ -163,6 +189,16 @@ package object implicits {
         } yield ()
       }
 
+      def writeShellScripts() = {
+        for {
+          _ <- fileSystemUtils.makeDirectory(getScriptsFolderPath)
+          _ <- this.writeShellScripts(
+            path,
+            underlying.coordinators.flatMap(descriptor => findShellActions(descriptor.coordinator.workflow)),
+            fileSystemUtils)
+        } yield ()
+      }
+
       def writeCoordinators() = {
         for {
           _ <- fileSystemUtils.makeDirectory(getCoordinatorFolderPath)
@@ -181,6 +217,7 @@ package object implicits {
         _ <- fileSystemUtils.writeTextFile(getBundleFilePath(bundleFileName), underlying.toXml(xmlPostProcessing))
         _ <- writeCoordinators()
         _ <- writeWorkflows()
+        _ <- writeShellScripts()
       } yield ()
     }
 
@@ -193,12 +230,13 @@ package object implicits {
       val pathProperties = underlying.coordinators.flatMap(descriptor => {
         List(
           createPathProperty(descriptor.coordinator.workflow.name, workflowFolderName),
-          createPathProperty(descriptor.coordinator.name, coordinatorFolderName))
+          createPathProperty(descriptor.coordinator.name, coordinatorFolderName)
+        ) ++ getShellActionProperties(descriptor.coordinator.workflow)
       }).toSet
 
       buildProperties(
         rootPath = path,
-        applicationProperty = "oozie.bundle.application.path",
+        applicationProperty = OozieClient.BUNDLE_APP_PATH,
         applicationPath = s"/$bundleFolderName/$bundleFileName",
         properties = Some(properties.getOrElse(Map[String, String]()) ++ pathProperties))
     }

@@ -1,6 +1,10 @@
 package com.klout.scoozie.utils
 
 import com.klout.scoozie.ScoozieConfig
+import com.klout.scoozie.ScoozieConfig._
+import com.klout.scoozie.dsl.{Node, Workflow}
+import com.klout.scoozie.jobs.{ShellScriptDescriptor, ShellJob}
+
 import com.klout.scoozie.writer.XmlPostProcessing
 
 import scala.xml.NodeSeq
@@ -19,7 +23,7 @@ object WriterUtils {
     )
   }
 
-  def withXmlExtension(name: String): String = s"$name.xml"
+  def withXmlExtension(name: String): String = s"$name.${ScoozieConfig.xmlExtension}"
 
   def addRootSubstitutionToPath(path: String) = "${" + ScoozieConfig.rootFolderParameterName + "}" + path
 
@@ -55,10 +59,20 @@ object WriterUtils {
     assertion = path.isDefined,
     message = s"A path was not defined for the following $applicationType: $applicationName")
 
-  def createPathProperty(name: String, folderName: String) = {
-    val fileName = withXmlExtension(name)
+  def createPathProperty(name: String, folderName: String, extension: String = "xml"): (String, String) = {
+    val fileName = s"$name.$extension"
     val substitutedPath = addRootSubstitutionToPath(s"/$folderName/$fileName")
 
     buildPathPropertyName(name) -> substitutedPath
   }
+
+  def findShellActions(workflow: Workflow[_]): List[ShellScriptDescriptor] = workflow.end.dependencies
+    .collect{ case x: Node => x.work }
+    .collect{ case x: ShellJob[_] => x.descriptor }
+    .flatten
+
+  def getShellActionProperties(workflow: Workflow[_]) = findShellActions(workflow)
+    .map(descriptor =>
+      createPathProperty(descriptor.name, scriptFolderName, scriptExtension))
+    .toMap
 }

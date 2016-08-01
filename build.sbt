@@ -67,6 +67,8 @@ contentsSizeLimit in (Compile, scalaxb) := 20
 
 namedAttributes in(Compile, scalaxb) := true
 
+parallelExecution in ThisBuild := false
+
 val rootFolder = "oozie"
 
 packageNames in scalaxb in Compile := Map(
@@ -109,6 +111,12 @@ publishTo in ThisBuild := {
     Some(Resolver.file("file",  new File( "maven-repo/snapshots" )) )
   else
     Some(Resolver.file("file",  new File( "maven-repo/releases" )) )
+}
+
+initialize := {
+  val required = "1.7"
+  val current  = sys.props("java.specification.version")
+  assert(current == required, s"Unsupported JDK: java.specification.version $current != $required")
 }
 
 mergeStrategy in assembly <<= (mergeStrategy in assembly) { (old) =>

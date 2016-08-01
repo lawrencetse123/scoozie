@@ -3,16 +3,10 @@ package com.klout.scoozie.runner
 import com.github.sakserv.minicluster.impl.HdfsLocalCluster
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
-import org.specs2.specification.BeforeAfterAll
 
 trait HdfsProvider {
   val hdfsUri: String
   val fs: FileSystem
-}
-
-trait BeforeAfterAllStackable extends BeforeAfterAll {
-  def beforeAll(): Unit = ()
-  def afterAll(): Unit = ()
 }
 
 trait TestHdfsProvider extends HdfsProvider with BeforeAfterAllStackable {

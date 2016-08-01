@@ -61,7 +61,7 @@ object ShellJob {
     val _jobName = jobName
 
     exec match {
-      case Left(shellString) =>
+      case Left(oozieExecString) =>
         new ShellJob[ACTION] (
           jobName = _jobName,
           record = DataRecord(None, Some("shell"), ACTION(
@@ -70,7 +70,7 @@ object ShellJob {
             prepare = prepare,
             jobu45xml = jobXml,
             configuration = configBuilderImpl(configuration),
-            exec = shellString,
+            exec = oozieExecString,
             argument = arguments,
             envu45var = environmentVariables,
             file = file,

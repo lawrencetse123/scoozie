@@ -11,16 +11,7 @@ import org.specs2.specification.BeforeAfterAll
 
 import scala.concurrent.Await
 
-class ScoozieAppSpec extends Specification with BeforeAfterAll with TestOozieClientProvider with TestHdfsProvider {
-  def beforeAll() = {
-    startHdfs()
-    startOozie()
-  }
-
-  def afterAll() = {
-    stopOozie()
-    stopHdfs()
-  }
+class ScoozieAppSpec extends Specification with BeforeAfterAll with TestHdfsProvider with TestOozieClientProvider {
 
   "Scoozie Application" should {
     "run a workflow application successfully" in {

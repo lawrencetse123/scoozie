@@ -8,12 +8,10 @@ import org.apache.oozie.local.LocalOozie
 trait OozieClientProvider {
   val oozieClient: OozieClient
   def oozieCoordClient: OozieClient
-  def startOozie(): Unit
-  def stopOozie(): Unit
 }
 
-trait TestOozieClientProvider extends OozieClientProvider {
-  this: TestHdfsProvider =>
+trait TestOozieClientProvider extends OozieClientProvider with BeforeAfterAllStackable {
+  this: HdfsProvider =>
 
   lazy val oozieLocalServer = new OozieLocalServer.Builder()
       .setOozieTestDir("embedded_oozie")
@@ -35,7 +33,13 @@ trait TestOozieClientProvider extends OozieClientProvider {
     LocalOozie.getCoordClient
   }
 
-  def startOozie(): Unit = oozieLocalServer.start()
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    oozieLocalServer.start()
+  }
 
-  def stopOozie(): Unit = oozieLocalServer.stop()
+  override def afterAll(): Unit = {
+    super.afterAll()
+    oozieLocalServer.stop()
+  }
 }

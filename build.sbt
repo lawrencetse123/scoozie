@@ -113,12 +113,6 @@ publishTo in ThisBuild := {
     Some(Resolver.file("file",  new File( "maven-repo/releases" )) )
 }
 
-initialize := {
-  val required = "1.7"
-  val current  = sys.props("java.specification.version")
-  assert(current == required, s"Unsupported JDK: java.specification.version $current != $required")
-}
-
 mergeStrategy in assembly <<= (mergeStrategy in assembly) { (old) =>
   {
     case PathList("META-INF", xs @ _*) =>

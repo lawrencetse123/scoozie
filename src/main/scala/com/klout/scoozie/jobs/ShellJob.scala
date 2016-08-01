@@ -1,13 +1,20 @@
 package com.klout.scoozie.jobs
 
-import com.klout.scoozie.dsl.{ ConfigBuilder, ConfigurationList, Job }
+import com.klout.scoozie.dsl.{ConfigBuilder, ConfigurationList, Job}
+import com.klout.scoozie.utils.WriterUtils
 import oozie.shell_0_3._
 
 import scalaxb.DataRecord
 
+case class ShellScript(script: String) extends AnyVal
+
+case class ShellScriptDescriptor(name: String, script: String)
+
+case class ShellJob[T](jobName: String, record: DataRecord[T], descriptor: Option[ShellScriptDescriptor]) extends Job[T]
+
 object ShellJob {
   def apply(jobName: String,
-            exec: String,
+            exec: Either[String, ShellScript],
             jobTracker: Option[String] = None,
             nameNode: Option[String] = None,
             prepare: Option[PREPARE] = None,
@@ -17,7 +24,7 @@ object ShellJob {
             environmentVariables: Seq[String] = Nil,
             file: Seq[String] = Nil,
             archive: Seq[String] = Nil,
-            captureOutput: Boolean = false) = v0_3(
+            captureOutput: Boolean = false): ShellJob[ACTION] = v0_3(
     jobName,
     exec,
     jobTracker,
@@ -33,7 +40,7 @@ object ShellJob {
   )
 
   def v0_3(jobName: String,
-           exec: String,
+           exec: Either[String, ShellScript],
            jobTracker: Option[String] = None,
            nameNode: Option[String] = None,
            prepare: Option[PREPARE] = None,
@@ -53,23 +60,48 @@ object ShellJob {
 
     val _jobName = jobName
 
-    new Job[ACTION] {
-      override val jobName = _jobName
-
-      override val record: DataRecord[ACTION] = DataRecord(None, Some("shell"), ACTION(
-        jobu45tracker = jobTracker,
-        nameu45node = nameNode,
-        prepare = prepare,
-        jobu45xml = jobXml,
-        configuration = configBuilderImpl(configuration),
-        exec = exec,
-        argument = arguments,
-        envu45var = environmentVariables,
-        file = file,
-        archive = archive,
-        captureu45output = if (captureOutput) Some(FLAG()) else None,
-        xmlns = "uri:oozie:shell-action:0.3")
+    exec match {
+      case Left(oozieExecString) =>
+        new ShellJob[ACTION] (
+          jobName = _jobName,
+          record = DataRecord(None, Some("shell"), ACTION(
+            jobu45tracker = jobTracker,
+            nameu45node = nameNode,
+            prepare = prepare,
+            jobu45xml = jobXml,
+            configuration = configBuilderImpl(configuration),
+            exec = oozieExecString,
+            argument = arguments,
+            envu45var = environmentVariables,
+            file = file,
+            archive = archive,
+            captureu45output = if (captureOutput) Some(FLAG()) else None,
+            xmlns = "uri:oozie:shell-action:0.3")
+          ),
+          descriptor = None
       )
+      case Right(shellScript) =>
+        import com.klout.scoozie.ScoozieConfig._
+        import com.klout.scoozie.utils.PropertyImplicits._
+
+        new ShellJob[ACTION] (
+          jobName = _jobName,
+          record = DataRecord(None, Some("shell"), ACTION(
+            jobu45tracker = jobTracker,
+            nameu45node = nameNode,
+            prepare = prepare,
+            jobu45xml = jobXml,
+            configuration = configBuilderImpl(configuration),
+            exec = s"$jobName.$scriptExtension",
+            argument = arguments,
+            envu45var = environmentVariables,
+            file = file ++ Seq(s"${WriterUtils.buildPathPropertyName(jobName).toParameter}#$jobName.$scriptExtension"),
+            archive = archive,
+            captureu45output = if (captureOutput) Some(FLAG()) else None,
+            xmlns = "uri:oozie:shell-action:0.3")
+          ),
+          descriptor = Some(ShellScriptDescriptor(jobName, shellScript.script))
+        )
     }
   }
 }

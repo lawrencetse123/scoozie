@@ -4,6 +4,10 @@ import java.io.StringWriter
 import java.util.Properties
 
 object PropertyImplicits {
+  implicit class StringWrapper(val string: String) extends AnyVal {
+    def toParameter: String = s"$${$string}"
+  }
+
   implicit class MapWrapper(val map: Map[String, String]) extends AnyVal {
     def getAsParameter(key: String): String = {
       map.get(key) match {

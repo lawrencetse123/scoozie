@@ -3,14 +3,13 @@ package com.klout.scoozie.runner
 import com.github.sakserv.minicluster.impl.HdfsLocalCluster
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
-import org.specs2.specification.BeforeAfterAll
 
 trait HdfsProvider {
   val hdfsUri: String
   val fs: FileSystem
 }
 
-trait TestHdfsProvider extends HdfsProvider with BeforeAfterAll {
+trait TestHdfsProvider extends HdfsProvider with BeforeAfterAllStackable {
   lazy val hdfsLocalCluster = new HdfsLocalCluster.Builder()
     .setHdfsNamenodePort(12345)
     .setHdfsNamenodeHttpPort(12222)
@@ -26,11 +25,13 @@ trait TestHdfsProvider extends HdfsProvider with BeforeAfterAll {
   lazy val fs: FileSystem = hdfsLocalCluster.getHdfsFileSystemHandle
 
   override def beforeAll(): Unit = {
+    super.beforeAll()
     hdfsLocalCluster.getHdfsConfig.set("fs.default.dir", hdfsUri)
     hdfsLocalCluster.start()
   }
 
   override def afterAll(): Unit = {
+    super.afterAll()
     hdfsLocalCluster.stop(true)
   }
 }

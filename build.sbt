@@ -67,6 +67,8 @@ contentsSizeLimit in (Compile, scalaxb) := 20
 
 namedAttributes in(Compile, scalaxb) := true
 
+parallelExecution in ThisBuild := false
+
 val rootFolder = "oozie"
 
 packageNames in scalaxb in Compile := Map(

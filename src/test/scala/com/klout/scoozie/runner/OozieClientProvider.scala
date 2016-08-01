@@ -10,11 +10,10 @@ trait OozieClientProvider {
   def oozieCoordClient: OozieClient
 }
 
-trait TestOozieClientProvider extends OozieClientProvider {
+trait TestOozieClientProvider extends OozieClientProvider with BeforeAfterAllStackable {
   this: HdfsProvider =>
 
-  lazy val oozieLocalServer = {
-    val server = new OozieLocalServer.Builder()
+  lazy val oozieLocalServer = new OozieLocalServer.Builder()
       .setOozieTestDir("embedded_oozie")
       .setOozieHomeDir("oozie_home")
       .setOozieUsername(System.getProperty("user.name"))
@@ -28,13 +27,19 @@ trait TestOozieClientProvider extends OozieClientProvider {
       .setOoziePurgeLocalShareLibCache(false)
       .build()
 
-    server.start()
-    server
+  lazy val oozieClient: OozieClient = oozieLocalServer.getOozieClient
+
+  def oozieCoordClient: OozieClient = {
+    LocalOozie.getCoordClient
   }
 
-  lazy val oozieClient: OozieClient = oozieLocalServer.getOozieClient
-  def oozieCoordClient: OozieClient = {
-    oozieLocalServer.getOozieClient
-    LocalOozie.getCoordClient
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    oozieLocalServer.start()
+  }
+
+  override def afterAll(): Unit = {
+    super.afterAll()
+    oozieLocalServer.stop()
   }
 }

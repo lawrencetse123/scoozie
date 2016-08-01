@@ -11,7 +11,8 @@ import org.specs2.specification.BeforeAfterAll
 
 import scala.concurrent.Await
 
-class ScoozieAppSpec extends Specification with BeforeAfterAll with TestOozieClientProvider with TestHdfsProvider {
+class ScoozieAppSpec extends Specification with BeforeAfterAll with TestHdfsProvider with TestOozieClientProvider {
+
   "Scoozie Application" should {
     "run a workflow application successfully" in {
       val appPath: Path = new Path(fs.getHomeDirectory, "testAppWorkflow")
@@ -44,7 +45,7 @@ class ScoozieAppSpec extends Specification with BeforeAfterAll with TestOozieCli
       scoozieApp.main(Array.empty)
 
       import scala.concurrent.duration._
-      val result = Await.result(scoozieApp.executionResult, 30.second)
+      val result = Await.result(scoozieApp.executionResult, 90.second)
 
       result.getStatus must_== Job.Status.SUCCEEDED
     }
@@ -63,7 +64,7 @@ class ScoozieAppSpec extends Specification with BeforeAfterAll with TestOozieCli
       scoozieApp.main(Array.empty)
 
       import scala.concurrent.duration._
-      val result = Await.result(scoozieApp.executionResult, 30.second)
+      val result = Await.result(scoozieApp.executionResult, 90.seconds)
 
       result.getStatus must_== Job.Status.SUCCEEDED
     }.pendingUntilFixed("Currently can't because Oozie... LocalTest doesn't support bundles")

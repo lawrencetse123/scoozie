@@ -31,8 +31,8 @@ libraryDependencies ++= Seq(
   "joda-time" % "joda-time" % "2.9.3",
   "com.github.sakserv" % "hadoop-mini-clusters-oozie" % hadoopMiniClusterVersion % "test",
   "com.github.sakserv" %  "hadoop-mini-clusters-hdfs" % hadoopMiniClusterVersion % "test",
-  "org.apache.hadoop" % "hadoop-hdfs" % hadoopVersion classifier "tests",
-  "org.apache.hadoop" % "hadoop-common" % hadoopVersion classifier "tests",
+  "org.apache.hadoop" % "hadoop-hdfs" % hadoopVersion % "test" classifier "tests",
+  "org.apache.hadoop" % "hadoop-common" % hadoopVersion % "test" classifier "tests",
   "me.lessis" %% "retry" % "0.2.0"
 )
 

@@ -14,9 +14,9 @@ abstract class BundleAppAbs[B: CanWriteXML,C: CanWriteXML, W: CanWriteXML] exten
   type JobStatus = org.apache.oozie.client.Job.Status
 
   import com.klout.scoozie.writer.implicits._
-  val writeResult = bundle.writeJob(appPath, jobProperties, fileSystemUtils, postProcessing)
+  lazy val writeResult = bundle.writeJob(appPath, jobProperties, fileSystemUtils, postProcessing)
   logWriteResult()
 
-  val executionResult: Future[Job] =
+  lazy val executionResult: Future[Job] =
     run[OozieClient, Job, JobStatus](oozieClient, bundle.getJobProperties(appPath, jobProperties))
 }

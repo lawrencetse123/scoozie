@@ -14,11 +14,11 @@ abstract class CoordinatorAppAbs[C: CanWriteXML, W: CanWriteXML] extends Scoozie
 
   import com.klout.scoozie.writer.implicits._
 
-  val writeResult = coordinator.writeJob(appPath, jobProperties, fileSystemUtils, postProcessing)
+  lazy val writeResult = coordinator.writeJob(appPath, jobProperties, fileSystemUtils, postProcessing)
 
   logWriteResult()
   ExecutionUtils.removeCoordinatorJob(coordinator.name, oozieClient)
 
-  val executionResult =
+  lazy val executionResult =
     ExecutionUtils.run[OozieClient, Job, JobStatus](oozieClient, coordinator.getJobProperties(appPath, jobProperties))
 }

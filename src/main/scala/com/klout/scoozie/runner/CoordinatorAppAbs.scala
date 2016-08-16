@@ -2,8 +2,8 @@ package com.klout.scoozie.runner
 
 import com.klout.scoozie.dsl.Coordinator
 import com.klout.scoozie.utils.ExecutionUtils
-import org.apache.oozie.client.OozieClient
 
+import scala.concurrent.Future
 import scalaxb.CanWriteXML
 
 abstract class CoordinatorAppAbs[C: CanWriteXML, W: CanWriteXML] extends ScoozieApp {
@@ -19,6 +19,5 @@ abstract class CoordinatorAppAbs[C: CanWriteXML, W: CanWriteXML] extends Scoozie
   logWriteResult()
   ExecutionUtils.removeCoordinatorJob(coordinator.name, oozieClient)
 
-  lazy val executionResult =
-    ExecutionUtils.run[OozieClient, Job, JobStatus](oozieClient, coordinator.getJobProperties(appPath, jobProperties))
+  val executionResult: Future[Job]
 }

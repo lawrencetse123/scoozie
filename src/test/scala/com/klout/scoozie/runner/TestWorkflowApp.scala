@@ -20,6 +20,4 @@ class TestWorkflowApp[W: CanWriteXML](override val workflow: Workflow[W],
 
   override val executionResult: Future[Job] =
     ExecutionUtils.run[OozieClient, Job, JobStatus](oozieClient, workflow.getJobProperties(appPath, jobProperties))
-
-
 }

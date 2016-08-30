@@ -89,6 +89,52 @@ class WriterSpec extends Specification with TryMatchers {
               .map(xml => xml.contains("test_shell_path=${rootFolder_path}/bin/test-shell.sh"))
               .get must_== true
         }
+
+        "write a workflow job with multiple shell actions to the correct path" in {
+            val scriptOne = ShellJob("test-shell", Right(ShellScript("echo test"))) dependsOn Start
+            val scriptTwo = ShellJob("test-shell-2", Right(ShellScript("echo haha"))) dependsOn Start
+            val scriptThree = ShellJob("test-shell-3", Right(ShellScript("echo asdfg"))) dependsOn scriptOne
+            val scriptFour = ShellJob("test-shell-4", Right(ShellScript("echo testing2"))) dependsOn scriptTwo
+
+            val workflow = Workflow(
+                name = "test-workflow",
+                end = End dependsOn Seq(scriptFour, scriptThree)
+            )
+
+            val currentTestFolder = s"$testFolder/workflow-write-job-with-multiple-shell-actions-test"
+
+            TestFileSystemUtils.makeDirectory(currentTestFolder)
+
+            val result: Try[Unit] = workflow.writeJob(
+                path = currentTestFolder,
+                fileSystemUtils = TestFileSystemUtils)
+
+            result.isSuccess must_== true
+            TestFileSystemUtils.ls(s"$currentTestFolder").get.map(_.getName).toSeq must contain("workflows", "job.properties", "bin")
+            TestFileSystemUtils.ls(s"$currentTestFolder/workflows").get.map(_.getName).toSeq must contain(s"test-workflow.xml")
+
+            TestFileSystemUtils.ls(s"$currentTestFolder/bin").get.map(_.getName).toSeq must
+              contain(s"test-shell.sh", s"test-shell-2.sh", s"test-shell-3.sh", s"test-shell-4.sh")
+
+            TestFileSystemUtils
+              .readTextFile(s"$currentTestFolder/workflows/test-workflow.xml")
+              .map(xml =>
+                  xml.contains("<exec>test-shell.sh</exec>") && xml.contains("<file>${test_shell_path}#test-shell.sh</file>")
+                  && xml.contains("<exec>test-shell-2.sh</exec>") && xml.contains("<file>${test_shell_2_path}#test-shell-2.sh</file>")
+                  && xml.contains("<exec>test-shell-3.sh</exec>") && xml.contains("<file>${test_shell_3_path}#test-shell-3.sh</file>")
+                  && xml.contains("<exec>test-shell-4.sh</exec>") && xml.contains("<file>${test_shell_4_path}#test-shell-4.sh</file>")
+              )
+              .get must_== true
+
+            TestFileSystemUtils
+              .readTextFile(s"$currentTestFolder/job.properties")
+              .map(xml =>
+                  xml.contains("test_shell_path=${rootFolder_path}/bin/test-shell.sh")
+                    && xml.contains("test_shell_2_path=${rootFolder_path}/bin/test-shell-2.sh")
+                    && xml.contains("test_shell_3_path=${rootFolder_path}/bin/test-shell-3.sh")
+                    && xml.contains("test_shell_4_path=${rootFolder_path}/bin/test-shell-4.sh"))
+              .get must_== true
+        }
     }
 
     "Coordinator writer" should {

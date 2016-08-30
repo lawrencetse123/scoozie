@@ -1,6 +1,7 @@
 package com.klout.scoozie.utils
 
 import com.klout.scoozie.ScoozieConfig
+import com.klout.scoozie.conversion.Flatten
 import com.klout.scoozie.dsl.{Node, Workflow}
 import com.klout.scoozie.jobs.{ShellScriptDescriptor, ShellJob}
 
@@ -65,10 +66,12 @@ object WriterUtils {
     buildPathPropertyName(name) -> substitutedPath
   }
 
-  def findShellActions(workflow: Workflow[_]): List[ShellScriptDescriptor] = workflow.end.dependencies
-    .collect{ case x: Node => x.work }
-    .collect{ case x: ShellJob[_] => x.descriptor }
-    .flatten
+  def findShellActions(workflow: Workflow[_]): List[ShellScriptDescriptor] =
+    Flatten(workflow).toList
+      .map{ case (dependency, _) => dependency.value }
+      .collect{ case x: Node => x.work }
+      .collect{ case x: ShellJob[_] => x.descriptor }
+      .flatten
 
   def getShellActionProperties(workflow: Workflow[_]) = findShellActions(workflow)
     .map(descriptor =>
